@@ -1,0 +1,33 @@
+2019/05/08
+	File I/O moved from testing phase (always 1 file) to storing results in res folder
+		File I/O functions in ptestio.c
+	
+	Primality test from RWG 7.5 implemented
+		find_QPP_7_5 implemented (RWG7.c)
+			P1, P2, and Q found with a lookup table, will fail ~1/10^22 times (can be fixed)
+		find_QPP renamed to find_QPP_7_2_4
+		get_ST_0 implemented (used in primality_test_7_5)
+		get_next_ST_i implemented (used in primality_test_7_5)
+		
+	Substantial refactoring of code in RWG2.c, RWG2s.c, RWG7.c and RWG7s.c (primality tests)
+		Significant speedup for test 7.2/4 in RWG by eliminating repeated computation
+	
+	Bugfixes to do with small primes (first million primes as found in primesSmall.txt) not being recognised as prime
+	
+	Many functions refactored slightly to be more readable, faster or more stylistically consistant
+	
+	All methods now have asymptotic time data in their description
+	
+	Added ChangeLog
+	
+	Some testing done and results in res folder (with Ar^n+/-1 for A <= 26, r <= 13, n <= 5000)
+	
+
+
+
+
+
+
+Future Updates
+	main program split into testing for SIDH primes and OEIS primes (currently set up for OEIS)
+	
