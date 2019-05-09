@@ -1,14 +1,14 @@
 #ifndef MPZRZ_MUL_H_
 #define MPZRZ_MUL_H_
 
-void mpzrz_mul (mpz_t z[3], mpz_t x[3], mpz_t y[3], mpz_t p);
+void mpzrz_mul (mpz_t z[], mpz_t x[], mpz_t y[], mpz_t p);
 
 #endif		//MPZRZ_MUL_H_
 
 #ifndef MPZRZ_SQR_H_
 #define MPZRZ_SQR_H_
 
-void mpzrz_sqr (mpz_t z[3], mpz_t x[3], mpz_t p);
+void mpzrz_sqr (mpz_t z[], mpz_t x[], mpz_t p);
 
 #endif		//MPZRZ_SQR_H_
 
@@ -32,11 +32,4 @@ int trial_div (mpz_t N, int ndiv);
 int gcd(int x, int y);
 
 #endif		//GCD_H_
-
-#ifndef ISSQUARE_H_
-#define ISSQUARE_H_
-
-_Bool isSquare(int n);
-
-#endif		//ISSQUARE_H_
 

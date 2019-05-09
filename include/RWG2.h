@@ -1,9 +1,9 @@
-#ifndef GET_G_R_CONSTANTS_H_
-#define GET_G_R_CONSTANTS_H_
+#ifndef GET_G_R_COEF_H_
+#define GET_G_R_COEF_H_
 
-_Bool get_g_r_constants (mpz_t constants[], long int r, int d, mpz_t N);
+_Bool get_g_r_coef (mpz_t constants[], long int r, int d, mpz_t N);
 
-#endif		//GET_G_R_CONSTANTS_H_
+#endif		//GET_G_R_COEF_H_
 
 #ifndef FIND_P_Q_H_
 #define FIND_P_Q_H_
