@@ -29,5 +29,9 @@
 
 
 Future Updates
-	main program split into testing for SIDH primes and OEIS primes (currently set up for OEIS)
+	code to remove failure chance in find_QPP_7_5
+	main function for SIDH prime finding
+	add presorting for exponents for OEIS prime finding
+	remove 2nd call to get_H_k in get_next_RST_i
+	in get_QPP_7_2_4 prioritize values of QPP so that Q is a perfect square or P1^2-4P2=0
 	
