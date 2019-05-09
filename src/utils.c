@@ -11,25 +11,25 @@ Parameters:
 Returns:
 	z	= x*y (mod p)
 Note that this method doesn't check that x_c = y_c, unexpected results may occur if this is not the case
+Runtime:	M(p)
 */
-void mpzrz_mul (mpz_t z[3], mpz_t x[3], mpz_t y[3], mpz_t p) {
-	mpz_t constant1; mpz_init(constant1);
-	mpz_t constant2; mpz_init(constant2);
+void mpzrz_mul (mpz_t z[], mpz_t x[], mpz_t y[], mpz_t p) {
+	mpz_t tmp_val[3]; mpz_init(tmp_val[0]); mpz_init(tmp_val[1]); mpz_init(tmp_val[2]);
 	mpz_t result; mpz_init(result);
-	mpz_mul (constant1, x[0], y[0]);			// x_a * y_a
-	mpz_mul (constant2, x[1], y[1]);			// x_b * y_b
-	mpz_mul (constant2, constant2, x[2]);		// x_b * y_b * x/y_c
-	mpz_add (result, constant1, constant2);
-	mpz_mul (constant1, x[0], y[1]);			// x_a * y_b
-	mpz_mul (constant2, x[1], y[0]);			// x_b * y_a
+	mpz_mul (tmp_val[0], x[0], y[0]);			// x_a * y_a
+	mpz_mul (tmp_val[1], x[1], y[1]);			// x_b * y_b
+	mpz_mul (tmp_val[1], tmp_val[1], x[2]);		// x_b * y_b * x/y_c
+	mpz_add (tmp_val[2], tmp_val[0], tmp_val[1]);
+	mpz_mul (tmp_val[0], x[0], y[1]);			// x_a * y_b
+	mpz_mul (tmp_val[1], x[1], y[0]);			// x_b * y_a
 	
-	mpz_set (z[0], result);
-	mpz_add (z[1], constant1, constant2);
+	mpz_set (z[0], tmp_val[2]);
+	mpz_add (z[1], tmp_val[0], tmp_val[1]);
 	mpz_set (z[2], x[2]);						// z = (x_a * y_a + x_b * y_b * x/y_c) + (x_a * y_b + x_b * y_a) * sqrt(x/y_c)
 	
-	mpz_clear(constant1);
-	mpz_clear(constant2);
-	mpz_clear(result);
+	mpz_clear(tmp_val[0]);
+	mpz_clear(tmp_val[1]);
+	mpz_clear(tmp_val[2]);
 	
 	mpz_mod (z[0], z[0], p);
 	mpz_mod (z[1], z[1], p);
@@ -41,24 +41,24 @@ Parameters:
 	p	modulus for arithmetic
 Returns:
 	z	= x*x (mod p)
+Runtime:	M(p)
 */
-void mpzrz_sqr (mpz_t z[3], mpz_t x[3], mpz_t p) {
-	mpz_t constant; mpz_init(constant);
-	mpz_t result; mpz_init(result);
+void mpzrz_sqr (mpz_t z[], mpz_t x[], mpz_t p) {
+	mpz_t tmp_val[2]; mpz_init(tmp_val[0]); mpz_init(tmp_val[1]);
 	
-	mpz_mul (constant, x[0], x[0]);				// = x_a^2
-	mpz_mul (result, x[1], x[1]);				// = x_b^2
-	mpz_mul (result, result, x[2]);				// = x_b^2 * x_c
-	mpz_add (result, constant, result);
+	mpz_mul (tmp_val[0], x[0], x[0]);				// = x_a^2
+	mpz_mul (tmp_val[1], x[1], x[1]);				// = x_b^2
+	mpz_mul (tmp_val[1], tmp_val[1], x[2]);			// = x_b^2 * x_c
+	mpz_add (tmp_val[1], tmp_val[0], tmp_val[1]);
 	
-	mpz_mul (constant, x[0], x[1]);				// = x_a * x_b
+	mpz_mul (tmp_val[0], x[0], x[1]);				// = x_a * x_b
 	
-	mpz_set (z[0], result);
-	mpz_mul_ui (z[1], constant, 2);
-	mpz_set (z[2], x[2]);						// z = (x_a^2 + x_b^2 * x_c) + (2 * x_a * x_b) * sqrt(x_c)
+	mpz_set (z[0], tmp_val[1]);
+	mpz_mul_ui (z[1], tmp_val[0], 2);
+	mpz_set (z[2], x[2]);							// z = (x_a^2 + x_b^2 * x_c) + (2 * x_a * x_b) * sqrt(x_c)
 	
-	mpz_clear(constant);
-	mpz_clear(result);
+	mpz_clear(tmp_val[0]);
+	mpz_clear(tmp_val[1]);
 	
 	mpz_mod (z[0], z[0], p);
 	mpz_mod (z[1], z[1], p);
@@ -72,8 +72,9 @@ Parameters:
 Returns:
 	int_result		= integer part of base^exp (mod p)
 	root_result		= non-integer part of base^exp (mod p) (may not be zero)
+Runtime:	log(exp)M(p)
 */
-void mpzrz_exp (mpz_t int_result, mpz_t root_result, mpz_t base[3], mpz_t exp, mpz_t mod) {
+void mpzrz_exp (mpz_t int_result, mpz_t root_result, mpz_t base[3], mpz_t exp, mpz_t p) {
 	mpz_t cexp; mpz_init(cexp);
 	mpz_t term[3]; mpz_init(term[0]); mpz_init(term[1]); mpz_init(term[2]);
 	mpz_t product[3]; mpz_init(product[0]); mpz_init(product[1]); mpz_init(product[2]);
@@ -82,7 +83,7 @@ void mpzrz_exp (mpz_t int_result, mpz_t root_result, mpz_t base[3], mpz_t exp, m
 	mpz_set (term[1], base[1]);
 	mpz_set (term[2], base[2]);
 	while (! mpz_tstbit (cexp, 0)) {						// before first set bit of exponent
-		mpzrz_sqr (term, term, mod);						// square the term to multiply by
+		mpzrz_sqr (term, term, p);							// square the term to multiply by
 		mpz_tdiv_q_2exp (cexp, cexp, 1);					// right shift exponent by 1
 	}														// now at first set bit of exponent => can initialize product
 	mpz_set (product[0], term[0]);							// initialize product
@@ -90,9 +91,9 @@ void mpzrz_exp (mpz_t int_result, mpz_t root_result, mpz_t base[3], mpz_t exp, m
 	mpz_set (product[2], term[2]);
 	mpz_tdiv_q_2exp (cexp, cexp, 1);						// right shift exponent by 1
 	while (mpz_cmp_ui (cexp, 0) != 0) {						// while exponent has more bits
-		mpzrz_sqr (term, term, mod);						// square the term to multiply by
+		mpzrz_sqr (term, term, p);							// square the term to multiply by
 		if (mpz_tstbit (cexp, 0)) {							// if rightmost bit is 1
-			mpzrz_mul (product, product, term, mod);		// do multiplication
+			mpzrz_mul (product, product, term, p);			// do multiplication
 		}
 		mpz_tdiv_q_2exp (cexp, cexp, 1);					// right shift exponent by 1
 	}
@@ -112,36 +113,25 @@ Returns:
 	integer		-1 if failed to open "primessmall.txt" (this file should exist and contain the first million primes on separate lines)
 				0 if no prime divisor of N was found (doesn't guarentee primality!)
 				>1 => the returned value divides N
+Runtime:	M(N) for division
 */
 int trial_div (mpz_t N, int ndiv) {
 	if (ndiv > 1000000 || ndiv < 1) {
 		ndiv = 1000000;
 	}
 	FILE *f = fopen ("primessmall.txt", "r");
-	if (f == NULL) {printf("Error opening primessmall.txt.\n"); return -1;}
-	int i = 0;
+	if (f == NULL) {printf("Error oepning file.\n"); return -1;}
 	int prime;
-	int rprime = 0;
-	int character;
-	mpz_t r; mpz_init(r);
-	while (i++ < ndiv) {
-		prime = 0;
-		while ((character = getc(f)) != EOF) {
-			if (character == 13 || character == 10) {
-				break;
-			}
-			prime *= 10;
-			prime += character - 48;
+	fscanf (f, "%d", &prime);
+	while (!feof(f)) {
+		if (mpz_divisible_ui_p (N, prime)) {				// if N (mod p) = 0
+			fclose(f);
+			return prime;
 		}
-		if (! mpz_tdiv_r_ui(r, N, prime) && !mpz_cmp_ui(N, prime) == 0) {				// if N (mod p) = 0
-			rprime = prime;
-			break;
-		}
-		//if (mpz_cmp_ui (N, prime * prime) < 0) {break;}				// doesn't occur for reasonably large primes so no need to test
+		fscanf (f, "%d", &prime);
 	}
-	mpz_clear(r);
 	fclose(f);
-	return rprime;
+	return 0;
 }
 
 /*			compute and return gcd(x,y)
@@ -150,7 +140,9 @@ Parameters:
 Returns:
 	integer		gcd(x,y)
 	
-For use with small integers
+For use with small integers! (large integers should instead use the mpz version)
+Runtime:	O(1)
+	only called with -100 < x, y < 100
 */
 int gcd(int x, int y) {
 	int temp;
@@ -160,14 +152,4 @@ int gcd(int x, int y) {
 		y = temp;
 	}
 	return x;
-}
-
-/*			check if n is a square integer
-Parameters:
-	n		integer to check if there exists an integer a such that a^2 = n
-Returns:
-	_Bool	true or false
-*/
-_Bool isSquare(int n) {
-	return !(n - (int) pow(floor(sqrt(n)), 2));
 }

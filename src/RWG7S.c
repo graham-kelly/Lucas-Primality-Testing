@@ -14,7 +14,8 @@ Parameters:
 Returns:
 	K_m		mth term of the K sequence from section 4 of RWG
 	L_m		mth term of the L sequence from section 4 of RWG
-	
+Runtime:	O(log(N)^2)
+	inversion (mod N)
 */
 void get_KL_m (mpz_t K_m, mpz_t L_m, mpz_t m, int QPP[3], mpz_t N) {
 	mpz_t L_1; mpz_init (L_1);
@@ -40,6 +41,7 @@ void get_KL_m (mpz_t K_m, mpz_t L_m, mpz_t m, int QPP[3], mpz_t N) {
 	mpz_mul_ui (W_i[3], W_i[3], 2);													// = K_2
 	long int h = mpz_sizeinbase (m, 2);												// get position of leftmost set bit
 	long int i = 1;
+mpz_mod (W_i[0], W_i[0], N); mpz_mod (W_i[1], W_i[1], N); mpz_mod (W_i[2], W_i[2], N); mpz_mod (W_i[3], W_i[3], N); 
 	while (i++ < h) {																	// for each bit of m starting from the left
 		mpz_mod (A, W_i[0], N);
 		mpz_mod (B, W_i[1], N);
@@ -81,6 +83,7 @@ void get_KL_m (mpz_t K_m, mpz_t L_m, mpz_t m, int QPP[3], mpz_t N) {
 			mpz_mul (W_i[3], C, D);
 			mpz_mul_ui (W_i[3], W_i[3], 2);											// = W_i[3]
 		}
+mpz_mod (W_i[0], W_i[0], N); mpz_mod (W_i[1], W_i[1], N); mpz_mod (W_i[2], W_i[2], N); mpz_mod (W_i[3], W_i[3], N); 
 	}
 	mpz_mod (L_m, W_i[0], N);			//should this be W_i[2] and [3] ?
 	mpz_mod (K_m, W_i[1], N);
@@ -102,6 +105,8 @@ Parameters:
 Returns:
 	U_i		order 4 lucas like sequence defined in section 3 of RWG
 	V_i		order 4 lucas like sequence defined in section 3 of RWG
+Runtime:	O(log(N)^2)
+	2 inversions (mod N), one in get_uv_i, the other in either invert, or get_KL_m
 */
 _Bool get_cUV_i (mpz_t U_i, mpz_t V_i, int QPP[3], mpz_t i, mpz_t N) {
 	long int Delta = QPP[1] * QPP[1] - 4 * QPP[2];							// Delta = P1^2 - 4 * P2
@@ -141,22 +146,22 @@ _Bool get_cUV_i (mpz_t U_i, mpz_t V_i, int QPP[3], mpz_t i, mpz_t N) {
 				mpz_clear (b);
 			}
 			else {
-				gmp_printf("Do need to implement Lehmer's algorithm");
+				gmp_printf("Do need to implement Lehmer's algorithm\n");
 				return 0;										//can be fixed but isn't implemented
 				// need actual implementation of Lehmer's algorithm here, use Lehmer 3.1 to compute the u_i and v_i values
 			}
 		}
 		else {
 			if (mpz_tstbit(i, 0) == 0) {						// if i is even
-				mpz_t constant; mpz_init (constant);
+				mpz_t tmp_val; mpz_init (tmp_val);
 				get_KL_m (U_i, V_i, i_div_2, QPP, N);			// get K_(i/2) and L_(i/2)
 				mpz_mul_ui (U_i, U_i, 2);
 				mpz_mul_ui (V_i, V_i, 2);
-				mpz_set_ui (constant, QPP[0]);
-				mpz_powm (constant, constant, i_div_2, N);		// = Q^(i/2)
-				mpz_mul (U_i, U_i, constant);					// U_i = 2 * Q^(i/2) * K_(i/2)
-				mpz_mul (V_i, V_i, constant);					// V_i = 2 * Q^(i/2) * L_(i/2)
-				mpz_clear (constant);
+				mpz_set_ui (tmp_val, QPP[0]);
+				mpz_powm (tmp_val, tmp_val, i_div_2, N);		// = Q^(i/2)
+				mpz_mul (U_i, U_i, tmp_val);					// U_i = 2 * Q^(i/2) * K_(i/2)
+				mpz_mul (V_i, V_i, tmp_val);					// V_i = 2 * Q^(i/2) * L_(i/2)
+				mpz_clear (tmp_val);
 			}
 			else {
 				gmp_printf ("Odd case for Delta != 0\n");		// not sure what to do here
@@ -180,183 +185,200 @@ Parameters:
 	N			arithmetic done (mod N), N = Ar^n + eta*gamma_n(r)
 
 Returns:
+	R0, S0, T0	as defined in eq 6.4 of RWG
+	_Bool		0 if inversion fails (N not prime), else 1
 	
+Runtime:	O(log(N)^2)
+	2 inversions (1 in get_cUV_i)
 */
-_Bool get_RST_0 (mpz_t RST[3], mpz_t rEXPn, int QPP[3], mpz_t N) {
-	mpz_t constant; mpz_init (constant);
+_Bool get_RST_0 (mpz_t RST[3], long int A, mpz_t rEXPn, mpz_t gamma_n_r, int eta, int QPP[3], mpz_t N) {
+	mpz_t tmp_val; mpz_init (tmp_val);
 	mpz_t i; mpz_init (i);
 	mpz_mul (i, N, N);
 	mpz_add_ui (i, i, 1);
 	mpz_divexact (i, i, rEXPn);								// i = (N^2 + 1) / (r^n)
-	if (!get_cUV_i (RST[0], RST[2], QPP, i, N)) {
+	if (!get_cUV_i (RST[0], RST[2], QPP, i, N)) {			// inversion failed, N not prime
 		return 0;
 	}
-	mpz_set_ui (constant, QPP[0]);
+	mpz_set_ui (tmp_val, QPP[0]);
 	mpz_tdiv_q_2exp (i, i, 1);								// = i/2
-	mpz_powm (constant, constant, i, N);					// constant = Q^(i/2)
-	mpz_mul_ui (constant, constant, 2);						// = 2*Q^(i/2)
-	mpz_invert (constant, constant, N);
-	mpz_mul (RST[0], RST[0], constant);
+	mpz_powm (tmp_val, tmp_val, i, N);						// tmp_val = Q^(i/2)
+	mpz_mul_ui (tmp_val, tmp_val, 2);						// = 2*Q^(i/2)
+	if (!mpz_invert (tmp_val, tmp_val, N)) {
+		return 0;
+	}
+	mpz_mul (RST[0], RST[0], tmp_val);
 	mpz_mod (RST[0], RST[0], N);
 	mpz_set (RST[1], RST[0]);
-	mpz_mul (RST[2], RST[2], constant);
+	mpz_mul (RST[2], RST[2], tmp_val);
 	mpz_mod (RST[2], RST[2], N);
 	mpz_clear (i);
-	mpz_clear (constant);
+	mpz_clear (tmp_val);
 	return 1;
 }
 
 /*			increment sequence term for R, S, T sequences (RWG eq 6.5-7)
 Parameters:
 	oldRST		values of R_i, S_i, T_i
-	constants	memory already allocated for this method (will be called many times in a row)
+	tmp_vals	memory already allocated for this method (will be called many times in a row)
 	QPP			array of (small) integers selected with properties described in sections 3 and 7 of RWG
 	r			small odd prime
 	N			arithmetic done (mod N), N = Ar^n + eta*gamma_n(r)
 	
 Returns:
 	newRST		values of R_(i+1), S_(i+1), T_(i+1)
+Runtime:		log(r) * r^2 * M(N)
+	due to get_H_k
 */
-void get_next_RST_i (mpz_t newRST[3], mpz_t oldRST[3], mpz_t constants[2], int QPP[3], long int r, mpz_t N) {
+void get_next_RST_i (mpz_t newRST[3], mpz_t oldRST[3], mpz_t tmp_val[2], int QPP[3], long int r, mpz_t N) {
 	long int delta = QPP[1] * QPP[1] - 4 * QPP[2];				// = P1^2 - 4*P2
 	long int k = (r-1)/2;
-	mpz_mul (constants[0], oldRST[2], oldRST[2]);
-	mpz_mul (constants[1], oldRST[1], oldRST[1]);
-	mpz_mul_si (constants[1], constants[1], delta);
-	mpz_mod (constants[0], constants[0], N);
-	mpz_mod (constants[1], constants[1], N);
-	get_H_k (newRST[0], constants[0], constants[1], k, N);		// R_i+1 = H_k(T_i^2, delta*S_i^2) (mod N)
-	get_H_k (constants[0], constants[1], constants[0], k, N);
-	mpz_mul (newRST[2], oldRST[2], constants[0]);				// T_i+1 = T_i * H_k(delta*S_i^2, T_i^2) (mod N)
+	mpz_mul (tmp_val[0], oldRST[2], oldRST[2]);
+	mpz_mul (tmp_val[1], oldRST[1], oldRST[1]);
+	mpz_mul_si (tmp_val[1], tmp_val[1], delta);
+	mpz_mod (tmp_val[0], tmp_val[0], N);
+	mpz_mod (tmp_val[1], tmp_val[1], N);
+	get_H_k (newRST[0], tmp_val[0], tmp_val[1], k, N);		// R_i+1 = H_k(T_i^2, delta*S_i^2) (mod N)
+	get_H_k (tmp_val[0], tmp_val[1], tmp_val[0], k, N);
+	mpz_mul (newRST[2], oldRST[2], tmp_val[0]);				// T_i+1 = T_i * H_k(delta*S_i^2, T_i^2) (mod N)
 	mpz_mul (newRST[1], oldRST[1], newRST[0]);					// S_i+1 = S_i * R_i+1
 	mpz_mod (newRST[0], newRST[0], N);
 	mpz_mod (newRST[1], newRST[1], N);
 	mpz_mod (newRST[2], newRST[2], N);
 }
 
-
-//_Bool new_get_RST_i (mpz_t rop[3], long int i, int QPP[3], long int r, mpz_t rEXPn, mpz_t N);
 /*			get particular term of R, S, T sequences (RWG 6.4 - 6.11)
+eq 6.8 - 6.10 of RWG give explicit formulas for these but computing these sequentially is faster (no inversion)
+
 Parameters:
 	i			index of sequences
 	QPP			array of (small) integers selected with properties described in sections 3 and 7 of RWG
+	A			even integer r !| A
 	r			small prime
 	rEXPn		r^n
+	gamma_n_r	sqrt(-1) (mod r^n)
+	eta			= +/- 1
 	N			arithmetic done (mod N), N = Ar^n + eta*gamma_n(r)
 	
 Returns:
 	rop			array of mpz_t [R_i, S_i, T_i]
+	
+Runtime:	O(log(N)^2)
+	2 inversions in get_RST_0
 */
-_Bool get_RST_i (mpz_t rop[3], long int i, int QPP[3], long int r, mpz_t rEXPn, mpz_t N) {		//		iterative appraoch
+_Bool get_RST_i (mpz_t rop[3], long int i, int QPP[3], long int A, long int r, mpz_t rEXPn, mpz_t gamma_n_r, int eta, mpz_t N) {
+//		************************************		would probably be more efficient to implement eq 6.8 - 6.10 of RWG here			************************************
 	mpz_t RST[3]; mpz_init (RST[0]); mpz_init (RST[1]); mpz_init (RST[2]);
-	mpz_t constants[2]; mpz_init (constants[0]); mpz_init (constants[1]);		// allocate space for get_next_RST_i method
-	if (!get_RST_0 (RST, rEXPn, QPP, N)) {										// compute R_0, S_0, T_0
+	mpz_t tmp_val[2]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);		// allocate space for get_next_RST_i method
+	if (!get_RST_0 (RST, A, rEXPn, gamma_n_r, eta, QPP, N)) {					// compute R_0, S_0, T_0
 		return 0;
 	}
 	long int j = 0;
 	while (j++ < i) {
-		get_next_RST_i (RST, RST, constants, QPP, r, N);						// constants are space reserved in memory to avoid reallocaiton every iteration
+		get_next_RST_i (RST, RST, tmp_val, QPP, r, N);						// tmp_val are space reserved in memory to avoid reallocaiton every iteration
 	}
 	mpz_mod (rop[0], RST[0], N);
 	mpz_mod (rop[1], RST[1], N);
 	mpz_mod (rop[2], RST[2], N);
-	
-	
-
-/*
-if (new_get_RST_i (RST, i, QPP, r, rEXPn, N)) {
-	if (mpz_cmp(RST[0], rop[0]) != 0 || mpz_cmp(RST[1], rop[1]) != 0 || mpz_cmp(RST[2], rop[2]) != 0) {
-		gmp_printf ("new R_i = %Zd\nold R_i = %Zd\n", RST[0], rop[0]);
-		gmp_printf ("new S_i = %Zd\nold S_i = %Zd\n", RST[1], rop[1]);
-		gmp_printf ("new T_i = %Zd\nold T_i = %Zd\n\n", RST[2], rop[2]);
-	}
-}
-*/
-	
-	
 	mpz_clear (RST[0]); mpz_clear (RST[1]); mpz_clear (RST[2]);
-	mpz_clear (constants[0]); mpz_clear (constants[1]);
+	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
 	return 1;
 }
 
-/*			get particular term of R, S, T sequences (RWG 6.8 - 6.10)
+/*			get first term of S, T sequences defined in Theorem 7.5 of RWG
 Parameters:
-	i			index of sequences
-	QPP			array of (small) integers selected with properties described in sections 3 and 7 of RWG
-	r			small prime
-	rEXPn		r^n
-	N			arithmetic done (mod N), N = Ar^n + eta*gamma_n(r)
-	
+	QPP			array of integers as required in Theorem 7.5 of RWG
+	rEXPn		5^n for N = A*5^n+eta*gamma_5(n)
+	tmp_val	memory already allocated
+	N			integer to be shown prime (or not)
+
 Returns:
-	rop			array of mpz_t [R_i, S_i, T_i]
+	S_i			S_0 as defined in Theorem 7.5 of RWG
+	T_i			T_0 as defined in Theorem 7.5 of RWG
+	_Bool		will be 0 if N is not prime (non-invertable member of Z_N found) else 1
+
+Runtime:	O(log(N)^2)
+	inversion
 */
-/*
-_Bool new_get_RST_i (mpz_t rop[3], long int i, int QPP[3], long int r, mpz_t rEXPn, mpz_t N) {
-gmp_printf("i = %d\nN = %Zd\n", i, N);
-	if (i == 0) {
-		if (get_RST_0 (rop, rEXPn, QPP, N)) {
-			return 1;
-		}
-		else {
-			return 0;
-		}
+_Bool get_ST_0 (mpz_t S_i, mpz_t T_i, int QPP[3], mpz_t rEXPn, mpz_t tmp_val[2], mpz_t N) {
+	mpz_mul (tmp_val[0], N, N);
+	mpz_add_ui (tmp_val[0], tmp_val[0], 1);
+	mpz_divexact (tmp_val[0], tmp_val[0], rEXPn);								// = (N^2+1) / 5^n
+	get_cUV_i (S_i, T_i, QPP, tmp_val[0], N);									// get U_((N^2+1) / 5^n) and V_((N^2+1) / 5^n)
+	mpz_divexact_ui (tmp_val[0], tmp_val[0], 2);								// = (N^2+1) / 2*5^n
+
+	mpz_set_ui (tmp_val[1], QPP[0]);
+	mpz_powm (tmp_val[0], tmp_val[1], tmp_val[0], N);							// = Q^(N^2+1) / 2*5^n
+	mpz_mul_ui (tmp_val[0], tmp_val[0], 2);										// = 2Q^(N^2+1) / 2*5^n
+	if (!mpz_invert (tmp_val[0], tmp_val[0], N)) {								// = 1 / 2Q^(N^2+1) / 2*5^n
+		return 0;																// not prime if inversion is not possible
 	}
-	mpz_t constants[3]; mpz_init (constants[0]); mpz_init (constants[1]); mpz_init (constants[2]);
-	mpz_mul (constants[0], N, N);
-	mpz_add_ui (constants[0], constants[0], 1);					// N^2 + 1
-	mpz_ui_pow_ui (constants[1], r, i);							// r^i
-	mpz_divexact (constants[1], rEXPn, constants[1]);			// r^(n-i) == r^n / r^i
-	mpz_divexact (constants[0], constants[0], constants[1]);	// N^2 + 1 / r^(n-i)
-	if (!get_cUV_i (rop[0], rop[2], QPP, constants[0], N)) {	// rop[0] and rop[2] = U_(N^2 + 1 / r^(n-i)) and V_(N^2 + 1 / r^(n-i)) respectively
-		mpz_clear (constants[0]); mpz_clear (constants[1]); mpz_clear (constants[2]);
-		return 0;
-	}
-gmp_printf ("1st term\tU_%Zd = %Zd\n\t\tV_%Zd = %Zd\n", constants[0], constants[1], constants[0], constants[2]);
-	mpz_cdiv_q_ui (constants[1], N, 2);							// 1/2
-	mpz_mul (constants[2], constants[0], constants[1]);			// = N^2 + 1 / 2r^(n-i)
-	mpz_set_si (rop[1], QPP[0]);
-	mpz_powm (constants[1], rop[1], constants[2], N);			// Q^(N^2 + 1 / 2r^(n-i))
-	mpz_mul_ui (constants[1], constants[1], 2);					// 2Q^(N^2 + 1 / 2r^(n-i))
-	if (!mpz_invert (rop[1], constants[1], N)) {				// 1 / 2Q^(N^2 + 1 / 2r^(n-i))
-		mpz_clear (constants[0]); mpz_clear (constants[1]); mpz_clear (constants[2]);
-		return 0;
-	}
-//gmp_printf ("\nU_i = %Zd\nV_i = %Zd\n", rop[0], rop[2]);
-	mpz_mul (rop[2], rop[1], rop[2]);							// = T_i = V_(N^2 + 1 / r^(n-i)) / (2 (N^2 + 1 / r^(n-i)))
-	mpz_mul (rop[1], rop[0], rop[1]);							// = S_i = U_(N^2 + 1 / r^(n-i)) / (2 (N^2 + 1 / r^(n-i)))
-//gmp_printf ("subscript = %Zd\n", constants[0]);
-	mpz_divexact_ui (constants[0], constants[0], r);			// N^2 + 1 / r^(n-i+1)
-//gmp_printf ("subscript = %Zd\n", constants[0]);
-	if (!get_cUV_i (constants[1], constants[2], QPP, constants[0], N)) {		// constants[1] = U_(N^2 + 1 / r^(n-i+1)), don't need V_(...) term
-		mpz_clear (constants[0]); mpz_clear (constants[1]); mpz_clear (constants[2]);
-		return 0;
-	}
-gmp_printf ("U_%Zd = %Zd\nV_%Zd = %Zd\n", constants[0], constants[1], constants[0], constants[2]);
-	if (!mpz_invert (constants[1], constants[1], N)) {
-		mpz_clear (constants[0]); mpz_clear (constants[1]); mpz_clear (constants[2]);
-		return 0;
-	}
-gmp_printf ("1/U_i = %Zd\n", constants[1]);
-	mpz_mul (rop[0], rop[0], constants[1]);			// = U_(N^2 + 1 / r^(n-i)) / U_(N^2 + 1 / r^(n-i+1))
-	mpz_divexact_ui (constants[0], constants[0], 2);			// N^2 + 1 / 2r^(n-i+1)
-	mpz_mul_ui (constants[0], constants[0], r-1);				// (r-1) (N^2 + 1 / 2r^(n-i+1))
-	mpz_set_si (constants[2], QPP[0]);
-	mpz_powm (constants[0], constants[2], constants[0], N);		// = Q^ (r-1) (N^2 + 1) / (2r^(n-i+1))
-gmp_printf ("Q term = %Zd\n", constants[0]);
-	mpz_mul (constants[0], constants[0], constants[1]);			// U_(N^2 + 1 / r^(n-i+1)) * Q^ (r-1) (N^2 + 1) / (2r^(n-i+1))
-	if (!mpz_invert (constants[0], constants[0], N)) {			// 1 / (line above)
-		mpz_clear (constants[0]); mpz_clear (constants[1]); mpz_clear (constants[2]);
-		return 0;
-	}
-	mpz_mul (rop[0], rop[0], constants[0]);						// = R_i
-	mpz_mod (rop[0], rop[0], N);
-	mpz_mod (rop[1], rop[1], N);
-	mpz_mod (rop[2], rop[2], N);
-	mpz_clear (constants[0]); mpz_clear (constants[1]); mpz_clear (constants[2]);
+	mpz_mul (S_i, S_i, tmp_val[0]);												// got S_0
+	mpz_mul (T_i, T_i, tmp_val[0]);												// got T_0
+	mpz_mod (S_i, S_i, N);
+	mpz_mod (T_i, T_i, N);
 	return 1;
 }
 
+/*			get first term of S, T sequences defined in Theorem 7.5 of RWG
+Parameters:
+	Delta		as defined in Theorem 7.5 of RWG
+	tmp_val	memory already allocated
+	N			integer to be shown prime
+
+Returns:
+	S_i			S_i+1 as defined in Theorem 7.5 of RWG
+	T_i			T_i+1 as defined in Theorem 7.5 of RWG
+Runtime:	O(M(N))
+	small exponents (<5) and multiplication (mod N)
 */
+void get_next_ST_i (mpz_t S_i, mpz_t T_i, long int Delta, mpz_t tmp_val[3], mpz_t N) {
+	mpz_powm_ui (tmp_val[0], S_i, 4, N);
+	mpz_mul_si (tmp_val[1], tmp_val[0], Delta * Delta);		// 1st term S_i+1 (D^2 * S^4)
+	mpz_mul_ui (tmp_val[2], tmp_val[1], 5);					// 1st term T_i+1 (5 * D^2 * S^4)
+
+	mpz_powm_ui (tmp_val[0], S_i, 2, N);
+	mpz_mul (tmp_val[0], tmp_val[0], T_i);
+	mpz_mul (tmp_val[0], tmp_val[0], T_i);
+	mpz_mul_si (tmp_val[0], tmp_val[0], 10 * Delta);		// 2nd term S_i+1 and T_i+1 (10 * D * S^2 * T^2)
+	mpz_add (tmp_val[1], tmp_val[1], tmp_val[0]);
+	mpz_add (tmp_val[2], tmp_val[2], tmp_val[0]);
+	
+	mpz_powm_ui (tmp_val[0], T_i, 4, N);					// 3rd term T_i+1 (T^4)
+	mpz_add (tmp_val[2], tmp_val[2], tmp_val[0]);
+	mpz_mul_ui (tmp_val[0], tmp_val[0], 5);					// 3rd term S_i+1 (5 * T^4)
+	mpz_add (tmp_val[1], tmp_val[1], tmp_val[0]);
+	
+	mpz_powm_ui (tmp_val[0], S_i, 2, N);
+	mpz_mul_si (tmp_val[0], tmp_val[0], -5 * Delta);		// 4th term S_i+1 (-5 * D * S^2)
+	mpz_add (tmp_val[1], tmp_val[1], tmp_val[0]);
+	mpz_mul_si (tmp_val[0], tmp_val[0], 3);					// 4th term T_i+1 (-15 * D * S^2)
+	mpz_add (tmp_val[2], tmp_val[2], tmp_val[0]);
+	
+	mpz_powm_ui (tmp_val[0], T_i, 2, N);
+	mpz_mul_si (tmp_val[0], tmp_val[0], -5);				// 5th term T_i+1 (-5 * T^2)
+	mpz_add (tmp_val[2], tmp_val[2], tmp_val[0]);
+	mpz_mul_si (tmp_val[0], tmp_val[0], 3);					// 5th term S_i+1 (-15 * T^2)
+	mpz_add (tmp_val[1], tmp_val[1], tmp_val[0]);
+	
+	mpz_add_ui (tmp_val[1], tmp_val[1], 5);					// 6th term S_i+1 (5)
+	mpz_add_ui (tmp_val[2], tmp_val[2], 5);					// 6th term T_i+1 (5)
+	
+	mpz_mul (tmp_val[1], tmp_val[1], S_i);
+	mpz_mod (S_i, tmp_val[1], N);
+	mpz_mul (tmp_val[2], tmp_val[2], T_i);
+	mpz_mod (T_i, tmp_val[2], N);
+}
+
+
+
+
+
+
+
+
+
+
 
 
 

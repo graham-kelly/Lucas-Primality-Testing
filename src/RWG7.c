@@ -5,6 +5,13 @@
 #include "RWG7.h"
 #include "RWG7S.h"
 
+#define MAX_ABSOLUTE_Q_P1_P2_SIZE 100;
+
+static const int P_ipq_table_size = 12;
+static const int P_ipq_table[12][3] =	{{11,-89,1199},{31,-409,22289},{41,981,239809},{61,1111,214049},		// format is [q, P(1,5,q), P(2,5,q)]
+										{71,101,-1310731},{101,271,-1294921},{131,-4009,3735989},
+										{151,596,-4423696},{181,1691,-7254661},{191,1331,-18326641},
+										{211,961,-24801151},{241,-3344,1283084}};
 
 /*			Evaluate the polynomial H_k(X,Y) (mod N)
 Parameters:
@@ -15,54 +22,57 @@ Parameters:
 	
 Returns:
 	rop		the value of H_k(X, Y) (mod N)
+Runtime:	O(log(r) * r^2 * M(N))
+	k = (r-1)/2 and most expensive operation is exponentiation in nested loop
 */
 void get_H_k (mpz_t rop, mpz_t X, mpz_t Y, long int k, mpz_t N) {
 	long int i;
 	long int j = 0;
 	mpz_t outer_sum; mpz_init (outer_sum);
 	mpz_t inner_sum; mpz_init (inner_sum);
-	mpz_t constant; mpz_init (constant);
-	mpz_t constant2; mpz_init (constant2);
+	mpz_t tmp_val[2]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);
 	mpz_set_ui (outer_sum, 0);
 	while (j <= k) {
 		i = 0;
 		mpz_set_ui (inner_sum, 0);
 		while (i <= j) {													// sum(i=0 -> j) binomial_coef(2j+1, 2i) * X^i * Y^(j-i)
-			mpz_powm_ui (constant, X, i, N);								// X^i
-			mpz_powm_ui (constant2, Y, j-i, N);								// Y^(j-i)
-			mpz_mul (constant, constant, constant2);						// X^i * Y^(j-i)
-			mpz_bin_uiui (constant2, 2*j+1, 2*i);							// binom (2j+1, 2i)
-			mpz_mul (constant, constant, constant2);
-			mpz_add (inner_sum, inner_sum, constant);						// inner_sum = (sum(i=0 -> j) binomial_coef (2j+1, 2i) * X^i * Y^(j-i)) / (2j+1)
+			mpz_powm_ui (tmp_val[0], X, i, N);								// X^i
+			mpz_powm_ui (tmp_val[1], Y, j-i, N);							// Y^(j-i)
+			mpz_mul (tmp_val[0], tmp_val[0], tmp_val[1]);					// X^i * Y^(j-i)
+			mpz_bin_uiui (tmp_val[1], 2*j+1, 2*i);							// binom (2j+1, 2i)
+			mpz_mul (tmp_val[0], tmp_val[0], tmp_val[1]);
+			mpz_add (inner_sum, inner_sum, tmp_val[0]);						// inner_sum = (sum(i=0 -> j) binomial_coef (2j+1, 2i) * X^i * Y^(j-i)) / (2j+1)
 			i++;
 		}
 		if ((k+j)%2 == 1) {													// *= (-1)^k+j
 			mpz_neg (inner_sum, inner_sum);
 		}
-		mpz_bin_uiui (constant, k+j, k-j);									// binomial_coef (k+j, k-j)
-		mpz_mul (inner_sum, inner_sum, constant);
+		mpz_bin_uiui (tmp_val[0], k+j, k-j);								// binomial_coef (k+j, k-j)
+		mpz_mul (inner_sum, inner_sum, tmp_val[0]);
 		mpz_mul_ui (inner_sum, inner_sum, 2*k+1);							// *= 2k+1
 		mpz_divexact_ui (inner_sum, inner_sum, 2*j+1);
 		mpz_add (outer_sum, outer_sum, inner_sum);
 		j++;
 	}
-	mpz_mod (rop, outer_sum, N);
+	mpz_mod (outer_sum, outer_sum, N);
+	mpz_set (rop, outer_sum);
 	mpz_clear (outer_sum);
 	mpz_clear (inner_sum);
-	mpz_clear (constant);
-	mpz_clear (constant2);
+	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
 }
 
-/*			Get appropreate values of Q, P1 and P2 for theorem 7.2/4
+/*			Get appropreate values of Q, P1 and P2 for theorem 7.2 / 7.4
 Parameters:
 	N	N = Ar^n + eta*gamma_n(r). Selection must result in Jacobi(Delta, N) = Jacobi(E, N) = -1 where Delta = P1^2 - 4P2 and E = (P2+4Q)^2 - 4QP1^2
 	
 Returns:
 	QPP		integer array [Q, P1, P2] such that Jacobi(Delta, N) = Jacobi(E, N) = -1 where Delta = P1^2 - 4P2 and E = (P2+4Q)^2 - 4QP1^2
+Runtime:	O(1)
+	jacobi with small integers (absolute size < 100 each)
 */
-_Bool find_QPP (int QPP[3], mpz_t N) {
+_Bool find_QPP_7_2_4 (int QPP[3], mpz_t N) {
 	QPP[0] = 1; QPP[1] = 1; QPP[2] = 1;
-	int MAX_VAL = 100;
+	int MAX_VAL = MAX_ABSOLUTE_Q_P1_P2_SIZE;
 	mpz_t Delta; mpz_init (Delta);		// Delta = P1^2 - 4P2
 	mpz_t E; mpz_init (E);				// E = (P2+4Q)^2 - 4QP1^2
 	while (QPP[0] < MAX_VAL) {
@@ -105,6 +115,39 @@ _Bool find_QPP (int QPP[3], mpz_t N) {
 	return 0;
 }
 
+/*			Use table lookup to find values of P(1,5,q) and P(2,5,q)
+Parameters:
+	q		small prime = 1 (mod 5) for which to find P(1,5,q) and P(2,5,q)
+	N		prime to be checked, will be used for one check if q is suitable
+	
+Returns:
+	QPP[0]	q^3
+	QPP[1]	value of P_1 = P(1,5,q) will be here when function returns true
+	QPP[2]	value of P_2 = P(2,5,q) will be here when function returns true
+	_Bool	true if P(1,5,q) and P(2,5,q) were found sucessfully
+Runtime:
+	Constant currently but will fail for q > 241 (chance of failure = 10^-22)
+	************************ (can implement algorithm for larger q) ************************
+*/
+_Bool find_QPP_7_5 (int QPP[3], mpz_t tmp_val, mpz_t N) {
+	int q;
+	for (int i = 0; i < P_ipq_table_size; i++) {	// check array above
+		q = P_ipq_table[i][0];
+		mpz_pow_ui (tmp_val, N, (q-1)/5);
+		mpz_sub_ui (tmp_val, tmp_val, 1);
+		if (!mpz_divisible_ui_p (tmp_val, q)) {
+			QPP[0] = q*q*q;					// Q
+			QPP[1] = P_ipq_table[i][1];		// P_1
+			QPP[2] = P_ipq_table[i][2];		// P_2
+			return 1;
+		}
+	}
+	QPP[0] = 0;
+	QPP[1] = 0;
+	QPP[2] = 0;
+	return 0;
+}
+
 /*			Theorem 7.1 Primality Test from RWG
 Parameters:
 	A	an even positive integer not divisible by r
@@ -121,23 +164,25 @@ Returns:
 	
 Let m, n be positive integers with n >= m and let N be given by 6.3 (of RWG) where r !| A and gamma_m(r) !| N.
 If A < 2r^(2m-n) and a prime divisor of p of N satisfies:		p^4 = 1 (mod r^m),			then N is a prime.
+Runtime:	
 */
+/*
 int primality_test_7_1 (long int A, long int r, long int n, int eta) {
 	int prime = -1;
 	if (A % 2 != 0 || eta*eta != 1 || A % r == 0) {
 		return prime;
 	}
 	mpz_t RST_m[3]; mpz_init (RST_m[0]); mpz_init (RST_m[1]); mpz_init (RST_m[2]);
-	mpz_t constants[2]; mpz_init (constants[0]); mpz_init (constants[1]);
+	mpz_t tmp_val[2]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);
 	mpz_t N; mpz_init (N);
 	mpz_t gamma_n_r; mpz_init (gamma_n_r);
 	mpz_t gamma_m_r; mpz_init (gamma_m_r);
 	mpz_t rEXPn; mpz_init (rEXPn);
 	mpz_t rEXPm; mpz_init (rEXPm);
 	mpz_ui_pow_ui (rEXPn, r, n);															// r^n
-	mpz_set_si (constants[0], -1);
-	mpz_set_ui (constants[1], r);
-	if (! h_lift_root (gamma_n_r, constants[0], constants[1], n)) {							// = sqrt(-1) if r^n = 1 (mod 4)
+	mpz_set_si (tmp_val[0], -1);
+	mpz_set_ui (tmp_val[1], r);
+	if (! h_lift_root (gamma_n_r, tmp_val[0], tmp_val[1], n)) {							// = sqrt(-1) if r^n = 1 (mod 4)
 		prime = -2;
 	}
 	else {
@@ -146,19 +191,19 @@ int primality_test_7_1 (long int A, long int r, long int n, int eta) {
 			mpz_add (gamma_n_r, gamma_n_r, rEXPn);											// to get odd sqrt(-1)
 		}																					// gamma_n(r) = sqrt(-1) (mod r^n)
 		mpz_mul_ui (N, rEXPn, A);															// = Ar^n
-		mpz_mul_si (constants[0], gamma_n_r, eta);
-		mpz_add (N, N, constants[0]);														// computed N
+		mpz_mul_si (tmp_val[0], gamma_n_r, eta);
+		mpz_add (N, N, tmp_val[0]);														// computed N
 //if (mpz_probab_prime_p (N, 20)) {gmp_printf("n = %d gives a likely prime\n", n);}
 		if (!trial_div (N, 0)) {															// trial division by first million primes
 			long int m = (long int) (log(A/2)/log(r) + n)/2;								// start with m = ceil ((log_r(A/2) + n)/2)
 			int QPP[3] = {3,2,1};															// pick QPP, gcd(N,Q) = 1, gcd (P1, P2, Q) = 1
-			if (get_RST_i (RST_m, m, QPP, r, rEXPn, N)) {
+			if (get_RST_i (RST_m, m, QPP, A, r, rEXPn, gamma_n_r, eta, N)) {
 				m++;
 				while (m <= n) {
 					mpz_ui_pow_ui (rEXPm, r, m);											// do using binomial theorem ?
-					mpz_set_si (constants[0], -1);
-					mpz_set_ui (constants[1], r);
-					if (h_lift_root (gamma_m_r, constants[0], constants[1], m)) {			// = sqrt(-1) mod r^m
+					mpz_set_si (tmp_val[0], -1);
+					mpz_set_ui (tmp_val[1], r);
+					if (h_lift_root (gamma_m_r, tmp_val[0], tmp_val[1], m)) {			// = sqrt(-1) mod r^m
 						if (mpz_tstbit(gamma_m_r, 0) == 0) {								// if root found is even
 							mpz_neg (gamma_m_r, gamma_m_r);
 							mpz_add (gamma_m_r, gamma_m_r, rEXPm);							// to get odd sqrt(-1)
@@ -168,10 +213,10 @@ int primality_test_7_1 (long int A, long int r, long int n, int eta) {
 							break;
 						}
 					}
-					get_next_RST_i (RST_m, RST_m, constants, QPP, r, N);
-					mpz_mul (constants[0], RST_m[2], RST_m[2]);								// = (T_m)^2 (if N is prime will be 4 (mod N))
-					mpz_set_ui (constants[1], 4);
-					if (mpz_congruent_p(constants[0], constants[1], N) && mpz_divisible_p(RST_m[0], N)){	// if (T_m)^2 = 4 (mod N) && N | R_m
+					get_next_RST_i (RST_m, RST_m, tmp_val, QPP, r, N);
+					mpz_mul (tmp_val[0], RST_m[2], RST_m[2]);								// = (T_m)^2 (if N is prime will be 4 (mod N))
+					mpz_set_ui (tmp_val[1], 4);
+					if (mpz_congruent_p(tmp_val[0], tmp_val[1], N) && mpz_divisible_p(RST_m[0], N)){	// if (T_m)^2 = 4 (mod N) && N | R_m
 						prime = 1;
 						break;																// then N is prime			
 					}
@@ -187,7 +232,7 @@ int primality_test_7_1 (long int A, long int r, long int n, int eta) {
 		}
 	}
 	mpz_clear (RST_m[0]); mpz_clear (RST_m[1]); mpz_clear (RST_m[2]);
-	mpz_clear (constants[0]); mpz_clear (constants[1]);
+	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
 	mpz_clear (N);
 	mpz_clear (gamma_n_r);
 	mpz_clear (gamma_m_r);
@@ -195,6 +240,7 @@ int primality_test_7_1 (long int A, long int r, long int n, int eta) {
 	mpz_clear (rEXPm);
 	return prime;																			// 1 if prime, 0 if composite, -1 if unknown, -2 if N doesn't exist
 }
+*/
 
 /*			Theorem 7.2 and 7.4 Primality Tests from RWG
 Parameters:
@@ -222,100 +268,137 @@ Returns:
 		If alpha is the least value of i such that N | T_i^2 - 4 and N | R_i then any prime divisor p of N
 		must satisfy p^4 = 1 (mod r^alpha). Also if A <= 2r^(2alpha - n) then N is prime
 		
+Runtime:	log(log(N)) * log(N)^2
+	from hensel lifting to find N
 */
 int primality_test_7_2_4 (long int A, long int r, long int n, int eta) {
-	int prime = -1;
 	if (A % 2 != 0 || eta*eta != 1 || A % r == 0) {
-		return prime;
+		return -1;
 	}
-	mpz_t N; mpz_init (N);
 	mpz_t rEXPn; mpz_init (rEXPn);
 	mpz_ui_pow_ui (rEXPn, r, n);															// r^n
 	if (mpz_cmp_ui (rEXPn, A/2) <= 0) {
-		return prime;
+		mpz_clear (rEXPn);
+		return -1;
 	}
 	mpz_t gamma_n_r; mpz_init (gamma_n_r);
-	mpz_t constants[2]; mpz_init (constants[0]); mpz_init (constants[1]);
-	mpz_set_si (constants[0], -1);
-	mpz_set_ui (constants[1], r);
-	if (! h_lift_root (gamma_n_r, constants[0], constants[1], n)) {							// = sqrt(-1) if r^n = 1 (mod 4)
-		prime = -2;
+	mpz_t tmp_val[2]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);
+	mpz_set_si (tmp_val[0], -1);
+	mpz_set_ui (tmp_val[1], r);
+	if (! h_lift_root (gamma_n_r, tmp_val[0], tmp_val[1], n)) {							// = sqrt(-1) if r^n = 1 (mod 4)
+		mpz_clear (rEXPn);
+		mpz_clear (gamma_n_r);
+		mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
+		return -2;
 	}
-	else {
-		if (mpz_tstbit(gamma_n_r, 0) == 0) {												// if root found is even
-			mpz_neg (gamma_n_r, gamma_n_r);
-			mpz_add (gamma_n_r, gamma_n_r, rEXPn);											// to get odd sqrt(-1)
-		}																					// gamma_n(r) = sqrt(-1) (mod r^n)
-		mpz_mul_ui (N, rEXPn, A);															// = Ar^n
-		mpz_mul_si (constants[0], gamma_n_r, eta);
-		mpz_add (N, N, constants[0]);														// computed N
+	if (mpz_tstbit(gamma_n_r, 0) == 0) {												// if root found is even
+		mpz_neg (gamma_n_r, gamma_n_r);
+		mpz_add (gamma_n_r, gamma_n_r, rEXPn);											// to get odd sqrt(-1)
+	}																					// gamma_n(r) = sqrt(-1) (mod r^n)
+	mpz_t N; mpz_init (N);
+	mpz_mul_ui (N, rEXPn, A);															// = Ar^n
+	mpz_mul_si (tmp_val[0], gamma_n_r, eta);
+	mpz_add (N, N, tmp_val[0]);														// computed N
 //************************************************************************************************************************************************************************************
-//if (mpz_probab_prime_p (N, 20)) {gmp_printf("n = %d gives a likely prime\n", n);}			// used for testing!
+//if (mpz_probab_prime_p (N, 20)) {gmp_printf("n = %d gives a likely prime\n", n);}
 //************************************************************************************************************************************************************************************
-		if (!trial_div (N, 0)) {															// trial division by first million primes
-			int QPP[3];
-			if (find_QPP (QPP, N)) {
-				mpz_t RST_i[3]; mpz_init (RST_i[0]); mpz_init (RST_i[1]); mpz_init (RST_i[2]);
-				mpz_t S_im1; mpz_init (S_im1);
-				if (get_RST_i (RST_i, 0, QPP, r, rEXPn, N)) {
-					long int alpha = 0;
-					while (alpha++ < n) {														// alpha = 1 ... n
-						mpz_set (S_im1, RST_i[1]);
-						get_next_RST_i (RST_i, RST_i, constants, QPP, r, N);
-						mpz_mul (constants[0], RST_i[2], RST_i[2]);								// = (T_i)^2 (if N is prime will be 4 (mod N))
-						mpz_sub_ui (constants[0], constants[0], 4);
-						if (mpz_divisible_p(RST_i[0], N) && !mpz_divisible_p(constants[0], N)) {	// based on Theorem 7.4
-							prime = 0;
-							break;
-						}
-						if (mpz_divisible_p(constants[0], N)) {									// if N | (T_i)^2 - 4
-							if (mpz_divisible_p(RST_i[1], N) && !mpz_divisible_p(S_im1, N) || mpz_divisible_p(RST_i[0], N)) {	// if N | S_i && N !| S_i-1 or N | R[i]
-								break;
-							}
-						}
-					}
-					if (log(A/2)/log(r) < 2*alpha - n) {									// N is prime (if N | T_n^2 -4 and S_n)
-						prime = 1;
-					}
-					else {																	// may be prime... prime divisor must satisfy p^4 = 1 (mod r^alpha)
-						gmp_printf ("A prime divisor of N = %d*%d^%d + (%d)gamma_n(r) must satisfy p^4 = 1 (mod %d^%d\n", A, r, n, eta, r, alpha);
-					}
-					if (prime != 0) {
-						while (alpha++ < n) {
-							get_next_RST_i (RST_i, RST_i, constants, QPP, r, N);
-							mpz_mul (constants[0], RST_i[2], RST_i[2]);								// = (T_i)^2 (if N is prime will be 4 (mod N) if N | R_i)
-							mpz_sub_ui (constants[0], constants[0], 4);
-							if (mpz_divisible_p(RST_i[0], N) && !mpz_divisible_p(constants[0], N)) {	// based on Theorem 7.4
-								prime = 0;
-								break;
-							}
-						}
-						mpz_mul (constants[0], RST_i[2], RST_i[2]);											// = (T_i)^2 (if N is prime will be 4 (mod N))
-						mpz_sub_ui (constants[0], constants[0], 4);
-						if (!mpz_divisible_p(constants[0], N) || !mpz_divisible_p(RST_i[1], N)) {				// check that N | T_n^2 -4 and S_n
-							prime = 0;
-						}
-					}
-				}
-				else {
-					prime = 0;
-				}
-				mpz_clear (RST_i[0]); mpz_clear (RST_i[1]); mpz_clear (RST_i[2]);
-				mpz_clear (S_im1);
-			}
-			else {
-				prime = 0;
-			}
+	int divRes = trial_div(N, 0);
+	if (divRes) {													// trial division by first million primes (can change 0 to any number between 1 and 1,000,000 to only try dividing by that many primes)
+		if (mpz_cmpabs_ui (N, divRes) == 0) {
+			mpz_clear(N);
+			mpz_clear (rEXPn);
+			mpz_clear (gamma_n_r);
+			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
+			return 1;
 		}
 		else {
-			prime = 0;
+			mpz_clear(N);
+			mpz_clear (rEXPn);
+			mpz_clear (gamma_n_r);
+			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
+			return 0;
 		}
-	}	
-	return prime;
-	
-	
-	
-	
+	}
+	int QPP[3];
+	if (!find_QPP_7_2_4 (QPP, N)) {
+		mpz_clear (N);
+		mpz_clear (rEXPn);
+		mpz_clear (gamma_n_r);
+		mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
+		return 0;
+	}
+	mpz_t RST_i[3]; mpz_init (RST_i[0]); mpz_init (RST_i[1]); mpz_init (RST_i[2]);
+	mpz_t S_im1; mpz_init (S_im1);
+	if (!get_RST_i (RST_i, 0, QPP, A, r, rEXPn, gamma_n_r, eta, N)) {
+		mpz_clear (N);
+		mpz_clear (rEXPn);
+		mpz_clear (gamma_n_r);
+		mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
+		mpz_clear (RST_i[0]); mpz_clear (RST_i[1]); mpz_clear (RST_i[2]);
+		mpz_clear (S_im1);
+		return 0;
+	}
+	long int alpha = 0;
+	while (alpha++ < n) {														// alpha = 1 ... n
+		mpz_set (S_im1, RST_i[1]);
+		get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, N);
+		mpz_mul (tmp_val[0], RST_i[2], RST_i[2]);								// = (T_i)^2 (if N is prime will be 4 (mod N))
+		mpz_sub_ui (tmp_val[0], tmp_val[0], 4);
+		if (mpz_divisible_p(RST_i[0], N) && !mpz_divisible_p(tmp_val[0], N)) {	// based on Theorem 7.4
+			mpz_clear (N);
+			mpz_clear (rEXPn);
+			mpz_clear (gamma_n_r);
+			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
+			mpz_clear (RST_i[0]); mpz_clear (RST_i[1]); mpz_clear (RST_i[2]);
+			mpz_clear (S_im1);
+			return 0;
+		}
+		if (mpz_divisible_p(tmp_val[0], N)) {									// if N | (T_i)^2 - 4
+			if ((mpz_divisible_p(RST_i[1], N) && !mpz_divisible_p(S_im1, N)) || mpz_divisible_p(RST_i[0], N)) {	// if N | S_i && N !| S_i-1 or N | R[i]
+				break;
+			}
+		}
+	}
+	if (log(A/2)/log(r) < 2*alpha - n) {
+		while (alpha++ < n) {
+			get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, N);
+		}
+		mpz_mul (tmp_val[0], RST_i[2], RST_i[2]);											// = (T_n)^2 (if N is prime will be 4 (mod N))
+		mpz_sub_ui (tmp_val[0], tmp_val[0], 4);
+		mpz_clear (rEXPn);
+		mpz_clear (gamma_n_r);
+		mpz_clear (tmp_val[1]);
+		mpz_clear (RST_i[0]); mpz_clear (RST_i[2]);
+		mpz_clear (S_im1);
+		if (mpz_divisible_p(tmp_val[0], N) && mpz_divisible_p(RST_i[1], N)) {				// if N | T_n^2 -4 and S_n
+			mpz_clear (N);
+			mpz_clear (tmp_val[0]);
+			mpz_clear (RST_i[1]); 
+			return 1;																		// N is prime
+		}
+		else {
+			mpz_clear (N);
+			mpz_clear (tmp_val[0]);
+			mpz_clear (RST_i[1]); 
+			return 0;
+		}
+	}
+/*
+	long int i = alpha;
+	while (i++ < n) {																// uncomment to potentially get information about prime divisors of N
+		get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, N);
+	}
+	if (mpz_divisible_p(tmp_val[0], N) && mpz_divisible_p(RST_i[1], N)) {				// if N | T_n^2 -4 and S_n
+		gmp_printf ("A prime divisor of N = %d*%d^%d + (%d)gamma_n(r) must satisfy p^4 = 1 (mod %d^%d\n", A, r, n, eta, r, alpha);
+	}
+*/
+	mpz_clear (N);
+	mpz_clear (rEXPn);
+	mpz_clear (gamma_n_r);
+	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
+	mpz_clear (RST_i[0]); mpz_clear (RST_i[1]); mpz_clear (RST_i[2]);
+	mpz_clear (S_im1);
+	return 0;
 }
 
 /*			Theorem 7.5 Primality Test from RWG
@@ -326,6 +409,7 @@ Parameters:
 
 Returns:
 	integer		based on N = A*5^n + eta*gamma_n(5)
+				-2 if no such number exists (gamma_n(r) cannot be computed (sqrt(-1) doesn't exist for r = 3 (mod 4)) )
 				-1 if primality is unknown
 				0 if composite
 				1 if prime
@@ -339,10 +423,98 @@ Returns:
 		for i = 0 , ... n-1, then N is prime iff 
 			4*Delta*(S_(n-1))^2 = 5 (mod N) and 2*T_(n-1) = -1 (mod N)
 
+Runtime:	log(log(N)) * log(N)^2
+	from hensel lifting to find N
 */
 int primality_test_7_5 (long int A, long int n, int eta) {
+	int r = 5;
+	if (A % 2 != 0 || eta*eta != 1 || A % r == 0) {
+		return -1;
+	}
+	mpz_t N; mpz_init (N);
+	mpz_t rEXPn; mpz_init (rEXPn);
+	mpz_ui_pow_ui (rEXPn, r, n);															// r^n
+	if (mpz_cmp_ui (rEXPn, A/2) <= 0) {
+		mpz_clear (N);
+		mpz_clear (rEXPn);
+		return -1;
+	}
+	mpz_t gamma_n_r; mpz_init (gamma_n_r);
+	mpz_t tmp_val[3]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]); mpz_init (tmp_val[2]);
+	mpz_set_si (tmp_val[0], -1);
+	mpz_set_ui (tmp_val[1], r);
+	if (! h_lift_root (gamma_n_r, tmp_val[0], tmp_val[1], n)) {							// = sqrt(-1) if r^n = 1 (mod 4)
+		mpz_clear (N);
+		mpz_clear (rEXPn);
+		mpz_clear (gamma_n_r);
+		mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]);
+		return -2;
+	}
+	if (mpz_tstbit(gamma_n_r, 0) == 0) {												// if root found is even
+		mpz_neg (gamma_n_r, gamma_n_r);
+		mpz_add (gamma_n_r, gamma_n_r, rEXPn);											// to get odd sqrt(-1)
+	}																					// gamma_n(r) = sqrt(-1) (mod r^n)
+	mpz_mul_ui (N, rEXPn, A);															// = Ar^n
+	mpz_mul_si (tmp_val[0], gamma_n_r, eta);
+	mpz_add (N, N, tmp_val[0]);														// computed N
+	mpz_clear (gamma_n_r);
+//************************************************************************************************************************************************************************************
+//if (mpz_probab_prime_p (N, 20)) {gmp_printf("n = %d gives a likely prime:\n", n);}
+//************************************************************************************************************************************************************************************
+	int divRes = trial_div(N, 0);
+	if (divRes) {													// trial division by first million primes (can change 0 to any number between 1 and 1,000,000 to only try dividing by that many primes)
+		if (mpz_cmpabs_ui (N, divRes) == 0) {
+			mpz_clear(N);
+			mpz_clear (rEXPn);
+			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]);
+			return 1;
+		}
+		else {
+			mpz_clear(N);
+			mpz_clear (rEXPn);
+			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]);
+			return 0;
+		}
+	}
+	int QPP[3];
+	if (!find_QPP_7_5 (QPP, tmp_val[0], N)) {									// if inversion fails
+//gmp_printf("Couldn't find Q, P1, and P2 for n = %d. Not implemented.\n", n);
+		return 0;
+	}
+	long int Delta = QPP[1]*QPP[1] - 4*QPP[2];										// Delta = P1^2 - 4P2
+	mpz_t S_i; mpz_init (S_i);
+	mpz_t T_i; mpz_init (T_i);
+	get_ST_0 (S_i, T_i, QPP, rEXPn, tmp_val, N);
+	mpz_clear (rEXPn);
+	for (long int i = 0; i < n - 1; i++) {
+		get_next_ST_i (S_i, T_i, Delta, tmp_val, N);								// compute S_(i+1) and T_(i+1)
+	}																				// have S_(n-1) and T_(n-1)
+	mpz_clear (tmp_val[2]);
+	mpz_powm_ui (tmp_val[0], S_i, 2, N);
+	mpz_mul_si (tmp_val[0], tmp_val[0], 4 * Delta);
+	mpz_sub_ui (tmp_val[0], tmp_val[0], 5);										// 4*Delta*S_(n-1)^2 - 5 (mod N)
+	mpz_mul_ui (tmp_val[1], T_i, 2);
+	mpz_add_ui (tmp_val[1], tmp_val[1], 1);										// 2*T_(n-1) + 1 (mod N)
+	mpz_clear (S_i);
+	mpz_clear (T_i);
+	if (mpz_divisible_p(tmp_val[0], N) && mpz_divisible_p(tmp_val[1], N)) {		// if two above (commented) values are 0 (mod N)
+		mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
+		mpz_clear (N);
+		return 1;
+	}
+	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); 
+	mpz_clear (N);
 	return 0;
 }
+
+
+
+
+
+
+
+
+
 
 
 
