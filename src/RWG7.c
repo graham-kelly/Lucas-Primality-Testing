@@ -13,7 +13,7 @@ static const int P_ipq_table[12][3] =	{{11,-89,1199},{31,-409,22289},{41,981,239
 										{151,596,-4423696},{181,1691,-7254661},{191,1331,-18326641},
 										{211,961,-24801151},{241,-3344,1283084}};
 
-/*			Evaluate the polynomial H_k(X,Y) (mod N)
+/*			Evaluate the polynomial H_k(X,Y), I_k(X,Y) (mod N)
 Parameters:
 	X	the first argument to the H_k polynomial defined in section 4 of RWG
 	Y	the second argument to the H_k polynomial defined in section 4 of RWG
@@ -21,43 +21,58 @@ Parameters:
 	N	number to evaluate H_k modulo, N = Ar^n + eta*gamma_n(r)
 	
 Returns:
-	rop		the value of H_k(X, Y) (mod N)
+	rop1	the value of H_k(X, Y) (mod N)
+	rop2	the value of I_k(X, Y) = H_k(Y,X) (mod N)
 Runtime:	O(log(r) * r^2 * M(N))
 	k = (r-1)/2 and most expensive operation is exponentiation in nested loop
 */
-void get_H_k (mpz_t rop, mpz_t X, mpz_t Y, long int k, mpz_t N) {
-	long int i;
-	long int j = 0;
-	mpz_t outer_sum; mpz_init (outer_sum);
-	mpz_t inner_sum; mpz_init (inner_sum);
+void get_HI_k (mpz_t rop1, mpz_t rop2, mpz_t X, mpz_t Y, int k, mpz_t N) {
+	int i;
+	int j = 0;
+	mpz_t outer_sum1; mpz_init (outer_sum1);
+	mpz_t inner_sum1; mpz_init (inner_sum1);
+	mpz_t outer_sum2; mpz_init (outer_sum2);
+	mpz_t inner_sum2; mpz_init (inner_sum2);
 	mpz_t tmp_val[2]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);
-	mpz_set_ui (outer_sum, 0);
+	mpz_set_ui (outer_sum1, 0);
+	mpz_set_ui (outer_sum2, 0);
 	while (j <= k) {
 		i = 0;
-		mpz_set_ui (inner_sum, 0);
+		mpz_set_ui (inner_sum1, 0);
+		mpz_set_ui (inner_sum2, 0);
 		while (i <= j) {													// sum(i=0 -> j) binomial_coef(2j+1, 2i) * X^i * Y^(j-i)
 			mpz_powm_ui (tmp_val[0], X, i, N);								// X^i
 			mpz_powm_ui (tmp_val[1], Y, j-i, N);							// Y^(j-i)
 			mpz_mul (tmp_val[0], tmp_val[0], tmp_val[1]);					// X^i * Y^(j-i)
 			mpz_bin_uiui (tmp_val[1], 2*j+1, 2*i);							// binom (2j+1, 2i)
-			mpz_mul (tmp_val[0], tmp_val[0], tmp_val[1]);
-			mpz_add (inner_sum, inner_sum, tmp_val[0]);						// inner_sum = (sum(i=0 -> j) binomial_coef (2j+1, 2i) * X^i * Y^(j-i)) / (2j+1)
+			mpz_mul (tmp_val[1], tmp_val[0], tmp_val[1]);
+			mpz_add (inner_sum1, inner_sum1, tmp_val[1]);					// inner_sum1 = (sum(i=0 -> j) binomial_coef (2j+1, 2i) * X^i * Y^(j-i)) / (2j+1)
+			mpz_bin_uiui (tmp_val[1], 2*j+1, 2*i+1);						// binom (2j+1, 2i+1)
+			mpz_mul (tmp_val[1], tmp_val[0], tmp_val[1]);
+			mpz_add (inner_sum2, inner_sum2, tmp_val[1]);					// inner_sum2 = (sum(i=0 -> j) binomial_coef (2j+1, 2i+1) * X^i * Y^(j-i)) / (2j+1)
 			i++;
 		}
 		if ((k+j)%2 == 1) {													// *= (-1)^k+j
-			mpz_neg (inner_sum, inner_sum);
+			mpz_neg (inner_sum1, inner_sum1);
+			mpz_neg (inner_sum2, inner_sum2);
 		}
 		mpz_bin_uiui (tmp_val[0], k+j, k-j);								// binomial_coef (k+j, k-j)
-		mpz_mul (inner_sum, inner_sum, tmp_val[0]);
-		mpz_mul_ui (inner_sum, inner_sum, 2*k+1);							// *= 2k+1
-		mpz_divexact_ui (inner_sum, inner_sum, 2*j+1);
-		mpz_add (outer_sum, outer_sum, inner_sum);
+		mpz_mul (inner_sum1, inner_sum1, tmp_val[0]);
+		mpz_mul_ui (inner_sum1, inner_sum1, 2*k+1);							// *= 2k+1
+		mpz_divexact_ui (inner_sum1, inner_sum1, 2*j+1);
+		mpz_add (outer_sum1, outer_sum1, inner_sum1);
+		mpz_mul (inner_sum2, inner_sum2, tmp_val[0]);
+		mpz_mul_ui (inner_sum2, inner_sum2, 2*k+1);							// *= 2k+1
+		mpz_divexact_ui (inner_sum2, inner_sum2, 2*j+1);
+		mpz_add (outer_sum2, outer_sum2, inner_sum2);
 		j++;
 	}
-	mpz_mod (outer_sum, outer_sum, N);
-	mpz_set (rop, outer_sum);
-	mpz_clear (outer_sum);
-	mpz_clear (inner_sum);
+	mpz_mod (rop1, outer_sum1, N);
+	mpz_mod (rop2, outer_sum2, N);
+	mpz_clear (outer_sum1);
+	mpz_clear (inner_sum1);
+	mpz_clear (outer_sum2);
+	mpz_clear (inner_sum2);
 	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
 }
 
@@ -167,7 +182,7 @@ If A < 2r^(2m-n) and a prime divisor of p of N satisfies:		p^4 = 1 (mod r^m),			
 Runtime:	
 */
 /*
-int primality_test_7_1 (long int A, long int r, long int n, int eta) {
+int primality_test_7_1 (int A, int r, int n, int eta) {
 	int prime = -1;
 	if (A % 2 != 0 || eta*eta != 1 || A % r == 0) {
 		return prime;
@@ -195,7 +210,7 @@ int primality_test_7_1 (long int A, long int r, long int n, int eta) {
 		mpz_add (N, N, tmp_val[0]);														// computed N
 //if (mpz_probab_prime_p (N, 20)) {gmp_printf("n = %d gives a likely prime\n", n);}
 		if (!trial_div (N, 0)) {															// trial division by first million primes
-			long int m = (long int) (log(A/2)/log(r) + n)/2;								// start with m = ceil ((log_r(A/2) + n)/2)
+			int m = (int) (log(A/2)/log(r) + n)/2;								// start with m = ceil ((log_r(A/2) + n)/2)
 			int QPP[3] = {3,2,1};															// pick QPP, gcd(N,Q) = 1, gcd (P1, P2, Q) = 1
 			if (get_RST_i (RST_m, m, QPP, A, r, rEXPn, gamma_n_r, eta, N)) {
 				m++;
@@ -271,7 +286,7 @@ Returns:
 Runtime:	log(log(N)) * log(N)^2
 	from hensel lifting to find N
 */
-int primality_test_7_2_4 (long int A, long int r, long int n, int eta) {
+int primality_test_7_2_4 (int A, int r, int n, int eta) {
 	if (A % 2 != 0 || eta*eta != 1 || A % r == 0) {
 		return -1;
 	}
@@ -338,7 +353,7 @@ int primality_test_7_2_4 (long int A, long int r, long int n, int eta) {
 		mpz_clear (S_im1);
 		return 0;
 	}
-	long int alpha = 0;
+	int alpha = 0;
 	while (alpha++ < n) {														// alpha = 1 ... n
 		mpz_set (S_im1, RST_i[1]);
 		get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, N);
@@ -384,7 +399,7 @@ int primality_test_7_2_4 (long int A, long int r, long int n, int eta) {
 		}
 	}
 /*
-	long int i = alpha;
+	int i = alpha;
 	while (i++ < n) {																// uncomment to potentially get information about prime divisors of N
 		get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, N);
 	}
@@ -426,7 +441,7 @@ Returns:
 Runtime:	log(log(N)) * log(N)^2
 	from hensel lifting to find N
 */
-int primality_test_7_5 (long int A, long int n, int eta) {
+int primality_test_7_5 (int A, int n, int eta) {
 	int r = 5;
 	if (A % 2 != 0 || eta*eta != 1 || A % r == 0) {
 		return -1;
@@ -481,12 +496,12 @@ int primality_test_7_5 (long int A, long int n, int eta) {
 //gmp_printf("Couldn't find Q, P1, and P2 for n = %d. Not implemented.\n", n);
 		return 0;
 	}
-	long int Delta = QPP[1]*QPP[1] - 4*QPP[2];										// Delta = P1^2 - 4P2
+	int Delta = QPP[1]*QPP[1] - 4*QPP[2];										// Delta = P1^2 - 4P2
 	mpz_t S_i; mpz_init (S_i);
 	mpz_t T_i; mpz_init (T_i);
 	get_ST_0 (S_i, T_i, QPP, rEXPn, tmp_val, N);
 	mpz_clear (rEXPn);
-	for (long int i = 0; i < n - 1; i++) {
+	for (int i = 0; i < n - 1; i++) {
 		get_next_ST_i (S_i, T_i, Delta, tmp_val, N);								// compute S_(i+1) and T_(i+1)
 	}																				// have S_(n-1) and T_(n-1)
 	mpz_clear (tmp_val[2]);

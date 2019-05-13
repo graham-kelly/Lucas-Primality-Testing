@@ -1,5 +1,6 @@
 #include <gmp.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include "utils.h"
 
@@ -120,7 +121,7 @@ int trial_div (mpz_t N, int ndiv) {
 		ndiv = 1000000;
 	}
 	FILE *f = fopen ("primessmall.txt", "r");
-	if (f == NULL) {printf("Error oepning file.\n"); return -1;}
+	if (f == NULL) {printf("Error opening file.\n"); return 0;}
 	int prime;
 	fscanf (f, "%d", &prime);
 	while (!feof(f)) {
@@ -131,6 +132,35 @@ int trial_div (mpz_t N, int ndiv) {
 		fscanf (f, "%d", &prime);
 	}
 	fclose(f);
+	return 0;
+}
+
+/*	Trial Division to catch small primes to add to files
+Parameters:
+	integers values as given in RWG section 2 primality tests (2.8 / 2.10)
+	the following relationship between the inputs should hold: n < (log(15485863-y)-log(A))/log(r)
+Returns:
+	1 => prime
+	0 => not prime
+*/
+int trail_div_small(int A, int r, int n, int y) {
+	mpz_t N; mpz_init (N);
+	mpz_ui_pow_ui (N, r, n);
+	mpz_mul_ui (N, N, A);
+	if (y == 1) {
+		mpz_add_ui (N, N, 1);
+	}
+	else {
+		mpz_sub_ui (N, N, 1);
+	}						// N = A*r^n+y
+	int divRes = trial_div(N, 0);
+	if (divRes) {			// trial division by first million primes (can change 0 to any number between 1 and 1,000,000 to only try dividing by that many primes)
+		if (mpz_cmpabs_ui (N, divRes) == 0) {
+			mpz_clear(N);
+			return 1;
+		}
+	}
+	mpz_clear(N);
 	return 0;
 }
 
@@ -153,3 +183,141 @@ int gcd(int x, int y) {
 	}
 	return x;
 }
+
+//	Comparison of two integers for use with qsort (equivalent to <)
+int cmp (const void * a, const void * b) {
+	return (*(int *)a - *(int *)b);
+}
+
+/*	Sort integer arrays and remove duplicates
+Parameters:
+	arr			the array to be sorted
+	init_size	initial size of integer array
+Returns:
+	arr is now sorted and contains no duplicates (and has minimal size)
+	new_size of arr is returned
+Runtime:	O(init_size)
+*/
+int remove_dup_array(int * arr, int init_size) {
+	qsort(arr, init_size, sizeof(int), cmp);
+	int current = *arr;
+	int new_size = 1;
+	for (int i = 1; i < init_size; i++) {
+		if (current != *(arr + i)) {
+			current = *(arr + i);
+			*(arr + new_size) = current;
+			new_size++;
+		}
+	}
+	arr = (int *) realloc (arr, sizeof(int) * new_size);
+	return new_size;
+}
+
+/*	Get information about which groups of n will always give composite numbers for N=Ar^n+y
+Parameters:
+	A,r,n,y		are positive integers as given in RWG section 2 primality tests (theorems 2.8 / 2.10)
+Returns:
+	not_to_run			contains triples of p, x, z such that A*r^x+y = 0 (mod p) and r^z = 1 (mod p)
+	size_not_to_run		
+Runtime:	O(p_n * M(A * r^(p_n))) 
+	where p_n is the nth prime number
+
+Note that initial size of not_to_run should be 2*n
+*/
+int get_not_to_run_2_8_10 (int * not_to_run, int A, int r, int n, int y) {
+	FILE *f = fopen ("primessmall.txt", "r");
+	if (f == NULL) {printf("Error opening file.\n"); return -1;}
+	int size_not_to_run = 0;
+	int p;
+	mpz_t test_N; mpz_init (test_N);
+	mpz_t rEXPj; mpz_init (rEXPj);
+	_Bool found_x;
+	_Bool found_z;
+	for (int i = 0; i < n; i++) {
+		fscanf (f, "%d", &p);														// get prime from primesSmall
+		if (p >= n) {
+			break;
+		}
+		mpz_set_ui (test_N, A % p);
+		if (y == 1) {
+			mpz_add_ui (test_N, test_N, 1);
+		}
+		else {
+			mpz_sub_ui (test_N, test_N, 1);
+		}						// test_N = A+y
+		mpz_set_ui (rEXPj, 1);
+		found_x = 0;
+		found_z = 0;
+		for (int j = 1; j < p; j++) {					// find x, z such that A*r^x+z = 0 (mod p) and r^z = 1 (mod p)
+			if (y == 1) {
+				mpz_sub_ui (test_N, test_N, 1);
+				mpz_mul_ui (test_N, test_N, r);
+				mpz_add_ui (test_N, test_N, 1);
+			}
+			else {
+				mpz_add_ui (test_N, test_N, 1);
+				mpz_mul_ui (test_N, test_N, r);
+				mpz_sub_ui (test_N, test_N, 1);
+			}						// test_N = A*(r^j) + y
+			if (!found_x && mpz_divisible_ui_p (test_N, p)) {
+				*(not_to_run + 2 * size_not_to_run) = j;
+				found_x = 1;
+			}
+			mpz_mul_ui (rEXPj, rEXPj, r);
+			if (!found_z && mpz_congruent_ui_p(rEXPj, 1, p)) {
+				*(not_to_run + 2 * size_not_to_run + 1) = j;
+				found_z = 1;
+			}
+			if (found_x && found_z) {					// not_to_run[size] = (x, z) such that A*r^x+y = 0 (mod p) and r^z = 1 (mod p)
+				size_not_to_run++;
+				break;
+			}
+		}
+	}
+	mpz_clear (test_N);
+	mpz_clear (rEXPj);
+	fclose(f);
+	not_to_run = (int *) realloc (not_to_run, sizeof(int) * 2 * size_not_to_run);
+	return size_not_to_run;
+}
+
+int get_n_to_run_2_8_10 (int * to_run, int A, int r, int n, int nf, int y) {
+	int *not_to_run = (int *) malloc(sizeof(int) * 2 * nf);						// get p, x, z such that A*r^x+y = 0 (mod p) and r^z = 1 (mod p)
+	int size_not_to_run = get_not_to_run_2_8_10 (not_to_run, A, r, nf, y);	// no n = x+kz for any integer k should be tested (all divisble by p)
+	int k = 0;
+	int exp;
+	for (int i = 0; i < size_not_to_run; i++) {		// for each small prime tested
+		exp = (int) ceil ((n - *(not_to_run + 2 * i)) / (double) *(not_to_run + 2 * i + 1)) * (*(not_to_run + 2 * i + 1)) + *(not_to_run + 2 * i) - n;		// get initial exponent's index (x - n + z*ceil( (n-x)/z) )
+		while (exp < nf - n + 1) {
+			*(to_run + exp) = 1;					// this N with exponent (exp+n) will be divisible by some small prime
+			exp += *(not_to_run + 2 * i + 1);		// add z (next iteration remove new exponent from the list if still in range)
+		}
+	}
+	int size_to_run = 0;
+	for (int i = 0; i < nf - n + 1; i++) {
+		if (!*(to_run + i)) {						// has not been marked as divisible by some x + kz above
+			*(to_run + size_to_run) = i + n;		// this integer should be run
+			size_to_run++;
+		}
+	}
+	to_run = (int *) realloc (to_run, sizeof(int) * size_to_run);
+	return size_to_run;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

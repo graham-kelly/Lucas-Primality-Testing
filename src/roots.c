@@ -103,12 +103,12 @@ _Bool ts_get_root (mpz_t result, mpz_t a, mpz_t q) {
 		return 0;
 	}
 	mpz_sub_ui (tmp_val[0], q, 1);						// = q-1
-	long int S = mpz_scan1 (tmp_val[0], 0);				// find first non-zero bit (from right to left) in q-1 and store its bit-number in S
+	int S = mpz_scan1 (tmp_val[0], 0);				// find first non-zero bit (from right to left) in q-1 and store its bit-number in S
 	mpz_set_ui (t, 1);
 	mpz_mul_2exp (t, t, S);									// = 2^S
 	mpz_divexact (t, tmp_val[0], t);						// t = (q-1) / (2^S)
 	mpz_set_ui (e, 0);										// initialize e
-	long int i = 2;
+	int i = 2;
 	mpz_invert (tmp_val[0], g, q);						// tmp_val[0] = g^-1
 	mpz_sub_ui (tmp_val[1], q, 1);
 	mpz_tdiv_q_2exp (tmp_val[1], tmp_val[1], i);		// tmp_val[1] = (q-1) / 2^i
@@ -239,7 +239,7 @@ Uses hensel lifting and the get_root method above to find the sqrt(a) (mod p^pow
 Runtime:	O(log(power) * (p^power)^2)
 	log(power) iterations of the inversion step dominate
 */
-_Bool h_lift_root (mpz_t rop, mpz_t a, mpz_t p, long int power) {
+_Bool h_lift_root (mpz_t rop, mpz_t a, mpz_t p, int power) {
 	mpz_t root; mpz_init (root);
 	if (!get_root(root, a, p)) {				// get sqrt(a) (mod p)
 		mpz_clear (root);

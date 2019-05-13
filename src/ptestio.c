@@ -1,6 +1,8 @@
+#include <gmp.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "utils.h"
 
 //	Adds prime's exponent to correct .txt file
 void add_prime_file(int exp, char * fileStr) {
@@ -12,11 +14,6 @@ void add_prime_file(int exp, char * fileStr) {
 	fprintf (f, "%d\n", exp);
 	fclose(f);
 	return;
-}
-
-//	Used by qsort in removeDupFile to order files (equivalent to <)
-int cmp (const void * a, const void * b) {
-	return (*(int *)a - *(int *)b);
 }
 
 //	Removes any duplicated prime's exponents from the specified .txt file
@@ -35,22 +32,10 @@ void remove_dup_file(char * fileStr) {
 			primes = (int *) realloc (primes, size * sizeof(int));					// should implement error checking as well
 		}
 	}
-	
-	qsort(primes, nPrimes, sizeof(int), cmp);
-	
-	int newNPrimes = 0;
-	int current = -1;
-	for (int i = 0; i < nPrimes; i++) {
-		if (current != *(primes + i)) {
-			current = *(primes + i);
-			*(primes + newNPrimes) = current;
-			newNPrimes++;
-		}
-	}
-	
+	nPrimes = remove_dup_array(primes, nPrimes);
 	f = freopen (fileStr, "w", f);
 	if (f == NULL) {printf ("Error reopening file, no duplicates removed.\n"); return;}
-	for (int i = 0; i < newNPrimes; i++) {
+	for (int i = 0; i < nPrimes; i++) {
 		fprintf (f, "%d\n", *(primes + i));
 	}
 	fclose(f);

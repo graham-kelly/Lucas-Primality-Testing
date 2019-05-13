@@ -1,6 +1,6 @@
 IDIR =../inc
 CC=gcc
-CFLAGS=-I$(IDIR)
+CFLAGS=-I$(IDIR)# -pg#uncomment -pg to enable profiling
 
 ODIR =../obj
 LDIR =../gmp-6.1.2/inc

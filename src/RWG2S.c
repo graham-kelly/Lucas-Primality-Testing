@@ -18,7 +18,7 @@ Returns:
 Runtime:	O(log(N)^2)
 	runtime dominated by 2 inversions (mod N) (also occurs in get_uv_i)
 */
-_Bool get_s_i (mpz_t result, long int A, long int r, long int i, int pqd[3], mpz_t N) {
+_Bool get_s_i (mpz_t result, int A, int r, int i, int pqd[3], mpz_t N) {
 	int p = 0, q = 1, d = 2;									// indices for the pqd array
 	mpz_t tmp_val[2]; mpz_init(tmp_val[0]); mpz_init(tmp_val[1]);
 	mpz_set_ui (tmp_val[0], r);
@@ -62,7 +62,7 @@ Returns:
 Runtime:	log(log(N)) * log(N)^2
 	runtime dominated by loop over get_s_i which requires two inversions (mod N)
 */
-long int bin_search_s_i (long int A, long int r, long int n, int pqd[3], mpz_t N) {
+int bin_search_s_i (int A, int r, int n, int pqd[3], mpz_t N) {
 	mpz_t s_i; mpz_init(s_i);
 	if (!get_s_i (s_i, A, r, n, pqd, N)) {						// if s_n is not 0 (mod N) then N is not prime (don't need anything else)
 		mpz_clear (s_i);
@@ -73,7 +73,7 @@ long int bin_search_s_i (long int A, long int r, long int n, int pqd[3], mpz_t N
 		return -1;
 	}
 	else {
-		long int lep = 0, rep = n, mpt;							// left and right endpoints (+ midpoint) for binary search
+		int lep = 0, rep = n, mpt;							// left and right endpoints (+ midpoint) for binary search
 		while (rep - lep > 1) {
 			mpt = (lep + rep - 1) / 2 + 1;						// mpt = (lep+rep)/2 if (lep-rep) is even otherwise mpt = (lep+rep)/2 + 1
 			if (!get_s_i (s_i, A, r, mpt, pqd, N)) {			// s_mpt
@@ -113,7 +113,7 @@ Returns:
 Runtime:	O(log(N)^2)
 	runtime dominated by 2 inversions (mod N) (also occurs in get_u_i)
 */
-int get_s0 (mpz_t s0, long int A, short y, mpz_t N) {
+int get_s0 (mpz_t s0, int A, short y, mpz_t N) {
 	int arr[3] = {0, 0, 0};											// used to store p, q, d
 	find_p_q (arr, N, y);
 	int p = arr[0];
@@ -157,12 +157,12 @@ Returns:
 	s_(i+1)		= g_r(s_i), as defined in RWG section 2
 Runtime:	O(r * M(N))
 */
-void get_next_s_i(mpz_t s_i, long int r, mpz_t tmp_val[], mpz_t N) {
+void get_next_s_i(mpz_t s_i, int r, mpz_t tmp_val[], mpz_t N) {
 	mpz_t sum; mpz_init (sum);
 	mpz_set_ui (sum, 0);
 	mpz_t term; mpz_init (term);
-	long int k = (r-1)/2;
-	long int j = 0;
+	int k = (r-1)/2;
+	int j = 0;
 	while (j <= k) {
 		mpz_powm_ui (term, s_i, 2 * j + 1, N);						// term = s_i^(2j+1) (mod N)
 		mpz_mul (term, term, tmp_val[j]);
@@ -188,7 +188,7 @@ Runtime:	O(log(N)^2)
 */
  _Bool get_u_i (mpz_t u_i, mpz_t i, int p, int d, mpz_t N) {
 	if (d >= 0 && pow(floor(sqrt(d)), 2) == d) {			// if d is a perfect square
-		long int rd = (long int) sqrt(d);
+		int rd = (int) sqrt(d);
 		mpz_t a; mpz_init(a);
 		mpz_t b; mpz_init(b);
 		mpz_cdiv_q_ui (b, N, 2);							// b = 1/2
@@ -243,7 +243,7 @@ Runtime:	O(log(N)^2)
 */
 _Bool get_uv_i (mpz_t u_i, mpz_t v_i, mpz_t i, int p, int d, mpz_t N) {
 	if (d >= 0 && pow(floor(sqrt(d)), 2) == d) {			// if d is a perfect square
-		long int rd = (long int) sqrt(d);
+		int rd = (int) sqrt(d);
 		mpz_t a; mpz_init(a);
 		mpz_t b; mpz_init(b);
 		mpz_cdiv_q_ui (b, N, 2);							// b = 1/2
@@ -296,7 +296,7 @@ Runtime:	O(log(i) * M(N))
 */
 _Bool get_v_i (mpz_t v_i, mpz_t i, int p, int d, mpz_t N) {
 	if (d >= 0 && pow(floor(sqrt(d)), 2) == d) {			// if d is a perfect square
-		long int rd = (long int) sqrt(d);
+		int rd = (int) sqrt(d);
 		mpz_t tmp_val; mpz_init(tmp_val);
 		mpz_set_ui (v_i, p + rd);							// = 2 * alpha
 		mpz_cdiv_q_ui (tmp_val, N, 2);						// tmp_val = 1/2
@@ -336,7 +336,7 @@ Returns:
 Runtime:	O(log(N)^2)
 	runtime dominated by 2 inversions (mod N) (also occurs in get_uv_i)
 */
-int get_r0_r1 (mpz_t r0, mpz_t r1, long int A, short y, mpz_t N) {
+int get_r0_r1 (mpz_t r0, mpz_t r1, int A, short y, mpz_t N) {
 	int arr[3] = {0, 0, 0};											//used to store p, q, d
 	find_p_q (arr, N, y);
 	int p = arr[0];

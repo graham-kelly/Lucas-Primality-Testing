@@ -22,7 +22,7 @@ where k = (r-1)/2 computing the k+1 coefficients and storing them in coefficient
 Runtime:	O(r*log(N)^2)
 	r inversions (mod N)
 */
-_Bool get_g_r_coef (mpz_t coefficients[], long int r, int d, mpz_t N) {
+_Bool get_g_r_coef (mpz_t coefficients[], int r, int d, mpz_t N) {
 	int k = (r-1)/2;												// note r is an odd prime (this is exact)
 	mpz_t term; mpz_init(term);
 	mpz_t tmp_val; mpz_init(tmp_val);
@@ -127,7 +127,7 @@ must have the form 2kr^alpha + y. Also if A<= 2r^(2alpha-n)
 then N is prime
 Runtime:	O(min(r * log(N)^2, log(log(N)) * log(N)^2))
 */
-int primality_test_2_8 (long int A, long int r, long int n, short y) {
+int primality_test_2_8 (int A, int r, int n, short y) {
 	mpz_t N; mpz_init(N);
 	mpz_t tmp_val; mpz_init(tmp_val);
 	mpz_ui_pow_ui (tmp_val, r, n);
@@ -156,9 +156,9 @@ int primality_test_2_8 (long int A, long int r, long int n, short y) {
 			return 0;
 		}
 	}
-	long int a = -1;
+	int a = -1;
 	if (log2(n) > r * log2(r)) {									// if log(n) > r(log(r))
-		long int k = (r-1)/2;										// the k for calculating g_r(x)
+		int k = (r-1)/2;										// the k for calculating g_r(x)
 		mpz_t g_r_coef[k + 1];										// has indexes 0 - k available
 		while (k >= 0) {
 			mpz_init (g_r_coef[k]);									// initialize coefficents for calculating g_r(x)
@@ -174,7 +174,7 @@ int primality_test_2_8 (long int A, long int r, long int n, short y) {
 			mpz_clear(tmp_val);
 			return 0;
 		}
-		long int i = 0;
+		int i = 0;
 		while ((0 != mpz_cmp_ui (tmp_val, 0)) && i++ < n) {			// while s_i != 0
 			get_next_s_i (tmp_val, r, g_r_coef, N);					// finds s_i+1 and stores it in tmp_val
 		}
@@ -246,7 +246,7 @@ k*2^a +/- 1. Also if A < 2^(2a-n)-1, then N is a prime
 Runtime:	O(log(N)^2)
 	2 inversions in get_r0_r1 dominate
 */
-short primality_test_2_10 (long int A, long int n, short y) {
+short primality_test_2_10 (int A, int n, short y) {
 	short result = 1;												// assume the number is prime until found composite
 	if (A % 2 == 0 || y*y != 1) {
 		return -1;													// test doesn't apply
@@ -284,14 +284,14 @@ short primality_test_2_10 (long int A, long int n, short y) {
 		mpz_clear (tmp_val);
 		return 0;													// if a multiplicative inverse doesn't exist mod N then N is not prime
 	}
-	long int a = -1;
+	int a = -1;
 	if (0 == mpz_cmp_ui (tmp_val, 0)) {								// if r0 = 0
 		a = 0;
 	}
 	if (0 == mpz_cmp_ui (r_i, 0)) {									// if r1 = 0
 		a = 1;
 	}
-	long int i = 1;
+	int i = 1;
 	while (i < n) {													// while a value hasn't been found yet
 		mpz_mul (r_i, r_i, r_i);
 		mpz_sub_ui (r_i, r_i, 2);									// r_(i+1) = r_i^2 - 2

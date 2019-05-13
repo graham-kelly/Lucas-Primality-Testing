@@ -39,8 +39,8 @@ void get_KL_m (mpz_t K_m, mpz_t L_m, mpz_t m, int QPP[3], mpz_t N) {
 	mpz_sub_ui (W_i[2], W_i[2], 2);													// = L_2
 	mpz_mul (W_i[3], K_1, L_1);
 	mpz_mul_ui (W_i[3], W_i[3], 2);													// = K_2
-	long int h = mpz_sizeinbase (m, 2);												// get position of leftmost set bit
-	long int i = 1;
+	int h = mpz_sizeinbase (m, 2);												// get position of leftmost set bit
+	int i = 1;
 mpz_mod (W_i[0], W_i[0], N); mpz_mod (W_i[1], W_i[1], N); mpz_mod (W_i[2], W_i[2], N); mpz_mod (W_i[3], W_i[3], N); 
 	while (i++ < h) {																	// for each bit of m starting from the left
 		mpz_mod (A, W_i[0], N);
@@ -109,9 +109,9 @@ Runtime:	O(log(N)^2)
 	2 inversions (mod N), one in get_uv_i, the other in either invert, or get_KL_m
 */
 _Bool get_cUV_i (mpz_t U_i, mpz_t V_i, int QPP[3], mpz_t i, mpz_t N) {
-	long int Delta = QPP[1] * QPP[1] - 4 * QPP[2];							// Delta = P1^2 - 4 * P2
-	long int E = (QPP[2] + 4*QPP[0])*(QPP[2] + 4*QPP[0]) - 4 * QPP[0] * QPP[1] * QPP[1];			// E = (P2 + 4Q)^2 - 4 * Q * P1^2
-	long int D = E * Delta * Delta * QPP[0] * QPP[0];						// discriminant D = E * Delta^2 * Q^2
+	int Delta = QPP[1] * QPP[1] - 4 * QPP[2];							// Delta = P1^2 - 4 * P2
+	int E = (QPP[2] + 4*QPP[0])*(QPP[2] + 4*QPP[0]) - 4 * QPP[0] * QPP[1] * QPP[1];			// E = (P2 + 4Q)^2 - 4 * Q * P1^2
+//	int D = E * Delta * Delta * QPP[0] * QPP[0];						// discriminant D = E * Delta^2 * Q^2
 	if (Delta == 0) {
 		if (!get_uv_i (U_i, V_i, i, QPP[1]/2, QPP[1]*QPP[1]/4 - 4*QPP[0], N)) {
 			return 0;
@@ -122,7 +122,7 @@ _Bool get_cUV_i (mpz_t U_i, mpz_t V_i, int QPP[3], mpz_t i, mpz_t N) {
 	else {
 		mpz_t i_div_2; mpz_init (i_div_2);
 		mpz_tdiv_q_2exp (i_div_2, i, 1);
-		long int R = (long int) sqrt(QPP[0]);
+		int R = (int) sqrt(QPP[0]);
 		if (E == 0 && Delta != 0) {								// if this is true then Q is a perfect square
 			if (mpz_tstbit(i, 0) == 0) {						// if i is even
 				mpz_t xcy[3]; mpz_init (xcy[0]); mpz_init (xcy[1]); mpz_init (xcy[2]);
@@ -191,7 +191,7 @@ Returns:
 Runtime:	O(log(N)^2)
 	2 inversions (1 in get_cUV_i)
 */
-_Bool get_RST_0 (mpz_t RST[3], long int A, mpz_t rEXPn, mpz_t gamma_n_r, int eta, int QPP[3], mpz_t N) {
+_Bool get_RST_0 (mpz_t RST[3], int A, mpz_t rEXPn, mpz_t gamma_n_r, int eta, int QPP[3], mpz_t N) {
 	mpz_t tmp_val; mpz_init (tmp_val);
 	mpz_t i; mpz_init (i);
 	mpz_mul (i, N, N);
@@ -230,18 +230,17 @@ Returns:
 Runtime:		log(r) * r^2 * M(N)
 	due to get_H_k
 */
-void get_next_RST_i (mpz_t newRST[3], mpz_t oldRST[3], mpz_t tmp_val[2], int QPP[3], long int r, mpz_t N) {
-	long int delta = QPP[1] * QPP[1] - 4 * QPP[2];				// = P1^2 - 4*P2
-	long int k = (r-1)/2;
+void get_next_RST_i (mpz_t newRST[3], mpz_t oldRST[3], mpz_t tmp_val[2], int QPP[3], int r, mpz_t N) {
+	int delta = QPP[1] * QPP[1] - 4 * QPP[2];				// = P1^2 - 4*P2
+	int k = (r-1)/2;
 	mpz_mul (tmp_val[0], oldRST[2], oldRST[2]);
 	mpz_mul (tmp_val[1], oldRST[1], oldRST[1]);
 	mpz_mul_si (tmp_val[1], tmp_val[1], delta);
 	mpz_mod (tmp_val[0], tmp_val[0], N);
 	mpz_mod (tmp_val[1], tmp_val[1], N);
-	get_H_k (newRST[0], tmp_val[0], tmp_val[1], k, N);		// R_i+1 = H_k(T_i^2, delta*S_i^2) (mod N)
-	get_H_k (tmp_val[0], tmp_val[1], tmp_val[0], k, N);
-	mpz_mul (newRST[2], oldRST[2], tmp_val[0]);				// T_i+1 = T_i * H_k(delta*S_i^2, T_i^2) (mod N)
-	mpz_mul (newRST[1], oldRST[1], newRST[0]);					// S_i+1 = S_i * R_i+1
+	get_HI_k (newRST[0], tmp_val[0], tmp_val[0], tmp_val[1], k, N);		// R_i+1 = H_k(T_i^2, delta*S_i^2) (mod N)
+	mpz_mul (newRST[2], oldRST[2], tmp_val[0]);							// T_i+1 = T_i * H_k(delta*S_i^2, T_i^2) (mod N)
+	mpz_mul (newRST[1], oldRST[1], newRST[0]);							// S_i+1 = S_i * R_i+1
 	mpz_mod (newRST[0], newRST[0], N);
 	mpz_mod (newRST[1], newRST[1], N);
 	mpz_mod (newRST[2], newRST[2], N);
@@ -266,14 +265,14 @@ Returns:
 Runtime:	O(log(N)^2)
 	2 inversions in get_RST_0
 */
-_Bool get_RST_i (mpz_t rop[3], long int i, int QPP[3], long int A, long int r, mpz_t rEXPn, mpz_t gamma_n_r, int eta, mpz_t N) {
+_Bool get_RST_i (mpz_t rop[3], int i, int QPP[3], int A, int r, mpz_t rEXPn, mpz_t gamma_n_r, int eta, mpz_t N) {
 //		************************************		would probably be more efficient to implement eq 6.8 - 6.10 of RWG here			************************************
 	mpz_t RST[3]; mpz_init (RST[0]); mpz_init (RST[1]); mpz_init (RST[2]);
 	mpz_t tmp_val[2]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);		// allocate space for get_next_RST_i method
 	if (!get_RST_0 (RST, A, rEXPn, gamma_n_r, eta, QPP, N)) {					// compute R_0, S_0, T_0
 		return 0;
 	}
-	long int j = 0;
+	int j = 0;
 	while (j++ < i) {
 		get_next_RST_i (RST, RST, tmp_val, QPP, r, N);						// tmp_val are space reserved in memory to avoid reallocaiton every iteration
 	}
@@ -332,7 +331,7 @@ Returns:
 Runtime:	O(M(N))
 	small exponents (<5) and multiplication (mod N)
 */
-void get_next_ST_i (mpz_t S_i, mpz_t T_i, long int Delta, mpz_t tmp_val[3], mpz_t N) {
+void get_next_ST_i (mpz_t S_i, mpz_t T_i, int Delta, mpz_t tmp_val[3], mpz_t N) {
 	mpz_powm_ui (tmp_val[0], S_i, 4, N);
 	mpz_mul_si (tmp_val[1], tmp_val[0], Delta * Delta);		// 1st term S_i+1 (D^2 * S^4)
 	mpz_mul_ui (tmp_val[2], tmp_val[1], 5);					// 1st term T_i+1 (5 * D^2 * S^4)
