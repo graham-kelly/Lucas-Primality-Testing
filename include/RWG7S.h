@@ -15,21 +15,21 @@ void get_KL_m (mpz_t K_m, mpz_t L_m, mpz_t m, int QPP[3], mpz_t N);
 #ifndef GET_RST_0_H_
 #define GET_RST_0_H_
 
-_Bool get_RST_0 (mpz_t RST[3], long int A, mpz_t rEXPn, mpz_t gamma_n_r, int eta, int QPP[3], mpz_t N);
+_Bool get_RST_0 (mpz_t RST[3], int A, mpz_t rEXPn, mpz_t gamma_n_r, int eta, int QPP[3], mpz_t N);
 
 #endif		//GET_RST_0_H_
 
 #ifndef GET_NEXT_RST_I_H_
 #define GET_NEXT_RST_I_H_
 
-void get_next_RST_i (mpz_t newRST[3], mpz_t oldRST[3], mpz_t constants[2], int QPP[3], long int r, mpz_t N);
+void get_next_RST_i (mpz_t newRST[3], mpz_t oldRST[3], mpz_t constants[2], int QPP[3], int r, mpz_t N);
 
 #endif		//GET_NEXT_RST_I_H_
 
 #ifndef GET_RST_I_H_
 #define GET_RST_I_H_
 
-_Bool get_RST_i (mpz_t rop[3], long int i, int QPP[3], long int A, long int r, mpz_t rEXPn, mpz_t gamma_n_r, int eta, mpz_t N);
+_Bool get_RST_i (mpz_t rop[3], int i, int QPP[3], int A, int r, mpz_t rEXPn, mpz_t gamma_n_r, int eta, mpz_t N);
 
 #endif		//GET_RST_I_H_
 
@@ -44,7 +44,7 @@ _Bool get_ST_0(mpz_t S_i, mpz_t T_i, int QPP[3], mpz_t rEXPn, mpz_t constants[2]
 #define GET_NEXT_ST_I_H_
 
 
-void get_next_ST_i (mpz_t S_i, mpz_t T_i, long int Delta, mpz_t constants[3], mpz_t N);
+void get_next_ST_i (mpz_t S_i, mpz_t T_i, int Delta, mpz_t constants[3], mpz_t N);
 
 #endif		//GET_NEXT_ST_I_H_
 

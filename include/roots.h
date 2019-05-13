@@ -29,7 +29,7 @@ _Bool verrify_root (mpz_t root, mpz_t k, mpz_t p);
 #ifndef H_LIFT_ROOT_H_
 #define H_LIFT_ROOT_H_
 
-_Bool h_lift_root (mpz_t rop, mpz_t a, mpz_t p, long int power);
+_Bool h_lift_root (mpz_t rop, mpz_t a, mpz_t p, int power);
 
 #endif		//H_LIFT_ROOT_H_
 
