@@ -23,7 +23,14 @@
 	Some testing done and results in res folder (with Ar^n+/-1 for A <= 26, r <= 13, n <= 5000)
 	
 
-
+2019/05/13
+	added sieving for exponents for OEIS prime finding
+		includes changes to OEIS testing function that cause small N to be checked only by trial division
+		now generates an array of n to check primality of N for (done in utils.get_n_to_run)
+	
+	removed 2nd call to get_H_k in get_next_RST_i
+		changed get_H_k to get_HI_k, now computes H(X,Y) and I(X,Y) = H(Y,X)
+			this adds a few additional multiplications but halves the number of calls to the function needed
 
 
 
@@ -31,7 +38,5 @@
 Future Updates
 	code to remove failure chance in find_QPP_7_5
 	main function for SIDH prime finding
-	add presorting for exponents for OEIS prime finding
-	remove 2nd call to get_H_k in get_next_RST_i
 	in get_QPP_7_2_4 prioritize values of QPP so that Q is a perfect square or P1^2-4P2=0
 	
