@@ -40,6 +40,13 @@ int gcd(int x, int y);
 
 #endif		//GCD_H_
 
+#ifndef ISSQUARE_H_
+#define ISSQUARE_H_
+
+_Bool isSquare(int x);
+
+#endif		//ISSQUARE_H_
+
 #ifndef CMP_H_
 #define CMP_H_
 
@@ -57,14 +64,28 @@ int remove_dup_array(int * arr, int init_size);
 #ifndef GET_NOT_TO_RUN_2_8_10_H_
 #define GET_NOT_TO_RUN_2_8_10_H_
 
-int get_not_to_run_2_8_10 (int * not_to_run, int A, int r, int n, int y);
+int get_not_to_run_2_8_10 (int * not_to_run, mpz_t A, int r, int n, int y);
 
 #endif		//GET_NOT_TO_RUN_2_8_10_H_
 
 #ifndef GET_N_TO_RUN_2_8_10_H_
 #define GET_N_TO_RUN_2_8_10_H_
 
-int get_n_to_run_2_8_10 (int * to_run, int A, int r, int n, int nf, int y);
+int get_n_to_run_2_8_10 (int * to_run, mpz_t A, int r, int n, int nf, int y);
 
 #endif		//GET_N_TO_RUN_2_8_10_H_
+
+#ifndef OEIS_TESTING_H_
+#define OEIS_TESTING_H_
+
+void OEIS_testing (char * fileStr, int test_num, int A, int r, int n, int nf, int y_eta);
+
+#endif		//OEIS_TESTING_H_
+
+#ifndef SIDH_TESTING_H_
+#define SIDH_TESTING_H_
+
+void SIDH_testing (char * fileStr, int bit_length, int r);
+
+#endif		//SIDH_TESTING_H_
 

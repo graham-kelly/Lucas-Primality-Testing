@@ -15,14 +15,14 @@ void find_p_q (int arr[3], mpz_t N, short y);
 #ifndef PRIMALITY_TEST_2_8_H_
 #define PRIMALITY_TEST_2_8_H_
 
-int primality_test_2_8 (int A, int r, int n, short y);
+int primality_test_2_8 (mpz_t A, int r, int n, short y);
 
 #endif		//PRIMALITY_TEST_2_8_H_
 
 #ifndef PRIMALITY_TEST_2_10_H_
 #define PRIMALITY_TEST_2_10_H_
 
-short primality_test_2_10 (int A, int n, short y);
+int primality_test_2_10 (mpz_t A, int n, short y);
 
 #endif		//PRIMALITY_TEST_2_10_H_
 

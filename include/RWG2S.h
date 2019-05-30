@@ -1,21 +1,21 @@
 #ifndef GET_S_I_H_
 #define GET_S_I_H_
 
-_Bool get_s_i (mpz_t result, int A, int r, int i, int pqd[3], mpz_t N);
+_Bool get_s_i (mpz_t result, mpz_t A, int r, int i, int pqd[3], mpz_t N);
 
 #endif		//GET_S_I_H_
 
 #ifndef BIN_SEARCH_S_I_H_
 #define BIN_SEARCH_S_I_H_
 
-int bin_search_s_i (int A, int r, int n, int pqd[3], mpz_t N);
+int bin_search_s_i (mpz_t A, int r, int n, int pqd[3], mpz_t N);
 
 #endif		//BIN_SEARCH_S_I_H_
 
 #ifndef GET_S0_H_
 #define GET_S0_H_
 
-int get_s0 (mpz_t s0, int A, short y, mpz_t N);
+int get_s0 (mpz_t s0, mpz_t A, short y, mpz_t N);
 
 #endif		//GET_S0_H_
 
@@ -50,7 +50,7 @@ _Bool get_v_i (mpz_t result, mpz_t i, int p, int d, mpz_t N);
 #ifndef GET_R0_R1_H_
 #define GET_R0_R1_H_
 
-int get_r0_r1 (mpz_t r0, mpz_t r1, int A, short y, mpz_t N);
+int get_r0_r1 (mpz_t r0, mpz_t r1, mpz_t A, short y, mpz_t N);
 
 #endif		//GET_R0_R1_H_
 

@@ -35,6 +35,13 @@ _Bool find_QPP_7_2_4 (int QPP[3], mpz_t N);
 
 #endif		//FIND_QPP_7_2_4_H_
 
+#ifndef TRY_BEST_QPP_7_2_4_H_
+#define TRY_BEST_QPP_7_2_4_H_
+
+_Bool try_best_QPP_7_2_4(int QPP[3], mpz_t N);
+
+#endif		//TRY_BEST_QPP_7_2_4_H_
+
 #ifndef FIND_QPP_7_5_H_
 #define FIND_QPP_7_5_H_
 
