@@ -1,0 +1,87 @@
+Main:
+	Functionality:
+		calls primality testing for OEIS sequences of prime numbers or groups of SIDH numbers by size (methods in uitls)
+	Methods:
+		(None)
+	
+RWG2:
+	Functionality:
+		Methods not strictly related to Lucas sequences required in primality testing
+		for section 2 of Roetteger, Williams and Guys paper 'Some primality tests that
+		eluded Lucas' (RWG) including the primality tests themselves
+	Methods:
+		get_g_r_coef - obtain coefficients for g_r polynomial (RWG theorem 2.4)
+		find_p_q - find integer values of p, q (RWG section 1 and theorem 2.8)
+		primality_test_2_8 - for finding primes of the form N = Ar^n + y (RWG theorem 2.8)
+		primality_test_2_10 - for finding primes of the form N = Ar^n + y (RWG theorem 2.10)
+
+RWG2S:
+	Functionality:
+		Methods for finding Lucas sequences (quadratic) and related sequences, the methods for finding
+		Lucas sequences are also required in section 7 primality testing
+	Methods:
+		get_s_i - Obtains arbitrary term of S integer sequence (formula from just before RWG theorem 2.5)
+		bin_search_s_i - Returns index of first 0 term of S integer sequence using get_s_i
+		get_s0 - get first term of S integer sequence (RWG theorem 2.4)
+		get_next_s_i - given ith term of S integer sequence gets S_(i+1) (RWG theorem 2.4)
+		get_u_i - obtain Lucas sequence (RWG section 1)
+		get_uv_i - obtain both Lucas sequences (RWG section 1)
+		get_v_i - obtain Lucas sequence (RWG section 1)
+		get_r0_r1 - obtain first two terms of R integer sequence (RWG theorem 2.10)
+
+RWG7:
+	Functionality:
+		Methods not strictly related to Lucas sequences required in primality testing
+		for section 7 of Roetteger, Williams and Guys paper 'Some primality tests that
+		eluded Lucas' (RWG) including the primality tests themselves
+	Methods:
+		get_HI_k - obtain values of the polynomials H and I (just before equation 4.1)
+		find_QPP_7_2_4 - find appropreate values of P1, P2 and Q integers (RWG theorem 7.2 and 7.4)
+		find_QPP_7_5 - find appropreate values of P1, P2 and Q integers (RWG theorem 7.5)
+		primality_test_7_2_4 - for finding primes of the form N = Ar^n + eta(y_n(r)) (RWG theorem 7.2 and 7.4)
+		primality_test_7_5 - for finding primes of the form N = Ar^n + eta(y_n(r)) (RWG theorem 7.5)
+
+RWG7S:
+	Functionality:
+		Methods for finding quartic Lucas sequences and quartic Lucas related sequences
+	Methods:
+		get_KL_m - obtain values for computing K and L using the formula with W_h (begining of RWG section 4)
+		get_cUV_i - computes the quartic Lucas sequences (uses get_uv_i (RWG2S), get_KL_m (RWG7S) or
+			mpzrz_exp (utils) methods) (RWG section 3)
+		get_RST_0 - gets first term of R, S, T sequences (as defined by RWG equations 6.4-6.10)
+		get_next_RST_i - gets next term of R, S, T sequences (as defined by RWG equations 6.4-6.10)
+		get_RST_i - iteratively finds a term of R, S, T sequences (as defined by RWG equations 6.4-6.10)
+		get_ST_0 - gets first term of S, T sequences (as defined in RWG theorem 7.5)
+		get_next_ST_i - gets next term of S, T sequences (as defined in RWG theorem 7.5)
+
+roots:
+	Functionality:
+		methods for finding modular square roots
+	Methods:
+		verrify_root - check that a modular square root is correct
+		c_get_root - find modular square roots using Cipolla's algorithm (uses the mpzrz methods in utils)
+		ts_get_root - find modular square roots using the Tonelli-Shanks algorithm
+		get_root - find modular square roots, uses simple formulas if applicable then the faster
+			of Cipolla's or the Tonelli-Shanks algorithm (dependant on factorization of the modulus-1)
+		h_lift_root - uses get_root to find a modular square root (mod p) and uses hensel lifting to find the root mod p^x
+	
+utils:
+	Functionality:
+		methods for some algebraic numbers (A + B * sqrt(C)), methods to seive out non-prime exponents for
+		use finding primes for OEIS, methods for iterating through OEIS and SIDH useful primes, and some simple algorithms
+	Methods:
+		mpzrz_mul - multiplication for numbers A + B * sqrt(C)
+		mpzrz_sqr - squaring for numbers A + B * sqrt(C)
+		mpzrz_exp - exponentiation for numbers A + B * sqrt(C)
+		trial_div - trail division for primality for large integers (tests up to first million primes)
+		trail_div_small - trail division for small integers (< 15485863)
+		gcd - gcd for very small integers (32 bits)
+		cmp - less than comparison required by remove_dup_array
+		remove_dup_array - used to ensure no duplicates are found in OEIS prime files
+		get_not_to_run_2_8_10 - part of seive for n such that Ar^n + y is never prime (for specific A, r, y) 
+		get_n_to_run_2_8_10 - seive to get n such that Ar^n + y may be prime (for specific A, r, y) 
+		OEIS_testing - iterate through possible primes Ar^n + y finding sequences that may be of interest to OEIS
+		SIDH_testing - iterate through possible primes Ar^n + y (f * 2^x * r^y - 1) of a given size finding primes that may be useful in SIDH
+
+
+
