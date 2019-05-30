@@ -18,13 +18,13 @@ Returns:
 Runtime:	O(log(N)^2)
 	runtime dominated by 2 inversions (mod N) (also occurs in get_uv_i)
 */
-_Bool get_s_i (mpz_t result, int A, int r, int i, int pqd[3], mpz_t N) {
+_Bool get_s_i (mpz_t result, mpz_t A, int r, int i, int pqd[3], mpz_t N) {
 	int p = 0, q = 1, d = 2;									// indices for the pqd array
 	mpz_t tmp_val[2]; mpz_init(tmp_val[0]); mpz_init(tmp_val[1]);
 	mpz_set_ui (tmp_val[0], r);
 	mpz_set_ui (tmp_val[1], i);
 	mpz_powm (tmp_val[0], tmp_val[0], tmp_val[1], N);
-	mpz_mul_ui (tmp_val[0], tmp_val[0], A);							// = Ar^i
+	mpz_mul (tmp_val[0], tmp_val[0], A);							// = Ar^i
 	if (!get_u_i (result, tmp_val[0], pqd[p], pqd[d], N)) {		// result = u_(Ar^i)
 		mpz_clear(tmp_val[0]);
 		mpz_clear(tmp_val[1]);
@@ -62,7 +62,7 @@ Returns:
 Runtime:	log(log(N)) * log(N)^2
 	runtime dominated by loop over get_s_i which requires two inversions (mod N)
 */
-int bin_search_s_i (int A, int r, int n, int pqd[3], mpz_t N) {
+int bin_search_s_i (mpz_t A, int r, int n, int pqd[3], mpz_t N) {
 	mpz_t s_i; mpz_init(s_i);
 	if (!get_s_i (s_i, A, r, n, pqd, N)) {						// if s_n is not 0 (mod N) then N is not prime (don't need anything else)
 		mpz_clear (s_i);
@@ -113,7 +113,7 @@ Returns:
 Runtime:	O(log(N)^2)
 	runtime dominated by 2 inversions (mod N) (also occurs in get_u_i)
 */
-int get_s0 (mpz_t s0, int A, short y, mpz_t N) {
+int get_s0 (mpz_t s0, mpz_t A, short y, mpz_t N) {
 	int arr[3] = {0, 0, 0};											// used to store p, q, d
 	find_p_q (arr, N, y);
 	int p = arr[0];
@@ -124,23 +124,19 @@ int get_s0 (mpz_t s0, int A, short y, mpz_t N) {
 		return d;
 	}
 	mpz_t tmp_val; mpz_init (tmp_val);
-	mpz_set_ui (tmp_val, A);
+	mpz_set (tmp_val, A);
 	if (! get_u_i (s0, tmp_val, p, d, N)) {						// = u_i
-		d = 0;
 		mpz_set_ui (s0, 0);
+		return 0;
 	}
-	if (q < 0) {
-		q = -q;														// q = |q|
-		if ((A/2) % 2) {											// if q^(A/2) < 0
-			mpz_sub (s0, N, s0);									// set s0 = - s0 (mod N)
-		}
-	}
-	mpz_ui_pow_ui (tmp_val, q, A/2);								// note A is even
-	mpz_mod (tmp_val, tmp_val, N);
+	mpz_set_si (tmp_val, q);
 	if (! mpz_invert (tmp_val, tmp_val, N)) {						// if not invertable => not prime (note: not prime =/> not invertable)
-		d = 0;
 		mpz_set_ui (s0, 0);
+		return 0;
 	}
+	mpz_tdiv_q_ui (A, A, 2);										// A will hold A/2 for the next few lines
+	mpz_powm (tmp_val, tmp_val, A, N);								// note A is even (using A/2)
+	mpz_mul_ui (A, A, 2);											// A back to regular value
 	mpz_mul (s0, s0, tmp_val);										// s0 = u_A / q^(A/2)
 	mpz_mod (s0, s0, N);											// s0 (mod N)
 	mpz_clear(tmp_val);
@@ -183,11 +179,11 @@ Parameters:
 Returns:
 	u_i		ith lucas sequence term
 Runtime:	O(log(N)^2)
-	if d is a perfect square then inversion dominates runtime
+	if d is a perfect square note that d is small (p^2-4q for |p|,|q| < 100) so this asymptotic runtime is misleading (in practice same as below case)
 	if d is not a perfect square then O(log(i) * M(N))
 */
  _Bool get_u_i (mpz_t u_i, mpz_t i, int p, int d, mpz_t N) {
-	if (d >= 0 && pow(floor(sqrt(d)), 2) == d) {			// if d is a perfect square
+	if (isSquare(d)) {										// if d is a perfect square
 		int rd = (int) sqrt(d);
 		mpz_t a; mpz_init(a);
 		mpz_t b; mpz_init(b);
@@ -238,7 +234,7 @@ Returns:
 
 Note takes much less time (~1/2) than calling both get_u_i and get_v_i separately
 Runtime:	O(log(N)^2)
-	if d is a perfect square then inversion dominates runtime
+	if d is a perfect square note that d is small (p^2-4q for |p|,|q| < 100) so this asymptotic runtime is misleading (in practice same as below case)
 	if d is not a perfect square then O(log(i) * M(N))
 */
 _Bool get_uv_i (mpz_t u_i, mpz_t v_i, mpz_t i, int p, int d, mpz_t N) {
@@ -336,7 +332,7 @@ Returns:
 Runtime:	O(log(N)^2)
 	runtime dominated by 2 inversions (mod N) (also occurs in get_uv_i)
 */
-int get_r0_r1 (mpz_t r0, mpz_t r1, int A, short y, mpz_t N) {
+int get_r0_r1 (mpz_t r0, mpz_t r1, mpz_t A, short y, mpz_t N) {
 	int arr[3] = {0, 0, 0};											//used to store p, q, d
 	find_p_q (arr, N, y);
 	int p = arr[0];
@@ -348,7 +344,7 @@ int get_r0_r1 (mpz_t r0, mpz_t r1, int A, short y, mpz_t N) {
 		return d;
 	}
 	mpz_t tmp_val[2]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);
-	mpz_set_ui (tmp_val[0], A);
+	mpz_set (tmp_val[0], A);
 	if (! get_uv_i (r0, r1, tmp_val[0], p, d, N)) {					// get u_A, v_A
 		d = 0;
 		mpz_set_ui (r0, 0);
@@ -365,10 +361,10 @@ int get_r0_r1 (mpz_t r0, mpz_t r1, int A, short y, mpz_t N) {
 		mpz_set_ui (r0, 0);
 		mpz_set_ui (r1, 0);
 	}																//tmp_val[0] = 1/sqrt(q)
-	mpz_pow_ui (tmp_val[0], tmp_val[0], A);								//tmp_val[0] = 1/(q^(A/2))
-	mpz_mul (r0, r0, tmp_val[0]);										//r0 = u_A / q^(A/2)
+	mpz_powm (tmp_val[0], tmp_val[0], A, N);						//tmp_val[0] = 1/(q^(A/2))
+	mpz_mul (r0, r0, tmp_val[0]);									//r0 = u_A / q^(A/2)
 	mpz_mod (r0, r0, N);											//r0 (mod N)
-	mpz_mul (r1, r1, tmp_val[0]);										//r1 = v_A / q^(A/2)
+	mpz_mul (r1, r1, tmp_val[0]);									//r1 = v_A / q^(A/2)
 	mpz_mod (r1, r1, N);											//r1 (mod N)
 	mpz_clear(tmp_val[0]);
 	mpz_clear(tmp_val[1]);

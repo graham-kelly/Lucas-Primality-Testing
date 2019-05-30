@@ -5,8 +5,6 @@
 #include "RWG7.h"
 #include "RWG7S.h"
 
-#define MAX_ABSOLUTE_Q_P1_P2_SIZE 100;
-
 static const int P_ipq_table_size = 12;
 static const int P_ipq_table[12][3] =	{{11,-89,1199},{31,-409,22289},{41,981,239809},{61,1111,214049},		// format is [q, P(1,5,q), P(2,5,q)]
 										{71,101,-1310731},{101,271,-1294921},{131,-4009,3735989},
@@ -76,25 +74,31 @@ void get_HI_k (mpz_t rop1, mpz_t rop2, mpz_t X, mpz_t Y, int k, mpz_t N) {
 	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
 }
 
+#define MAX_ABSOLUTE_Q_P1_P2_SIZE 100;
+
 /*			Get appropreate values of Q, P1 and P2 for theorem 7.2 / 7.4
 Parameters:
 	N	N = Ar^n + eta*gamma_n(r). Selection must result in Jacobi(Delta, N) = Jacobi(E, N) = -1 where Delta = P1^2 - 4P2 and E = (P2+4Q)^2 - 4QP1^2
 	
 Returns:
 	QPP		integer array [Q, P1, P2] such that Jacobi(Delta, N) = Jacobi(E, N) = -1 where Delta = P1^2 - 4P2 and E = (P2+4Q)^2 - 4QP1^2
+
 Runtime:	O(1)
 	jacobi with small integers (absolute size < 100 each)
 */
 _Bool find_QPP_7_2_4 (int QPP[3], mpz_t N) {
-	QPP[0] = 1; QPP[1] = 1; QPP[2] = 1;
+	if (try_best_QPP_7_2_4(QPP, N)) {	// if this suceeds can avoid get_KL_m method which is slow (same asymptotic run time but much lower constant)
+		return 1;
+	}
 	int MAX_VAL = MAX_ABSOLUTE_Q_P1_P2_SIZE;
 	mpz_t Delta; mpz_init (Delta);		// Delta = P1^2 - 4P2
 	mpz_t E; mpz_init (E);				// E = (P2+4Q)^2 - 4QP1^2
-	while (QPP[0] < MAX_VAL) {
-		QPP[1] = 1;
-		while (QPP[1] < MAX_VAL) {
-			QPP[2] = 1;
-			while (QPP[2] < MAX_VAL) {
+	for (QPP[0] = 1; QPP[0] < MAX_VAL;) {
+		if (isSquare(QPP[0])) {			// already checked all of these
+			continue;
+		}
+		for (QPP[1] = 1; QPP[1] < MAX_VAL;) {
+			for (QPP[2] = 1; QPP[2] < MAX_VAL;) {
 				if (gcd (QPP[0], QPP[1]) == 1 && gcd (QPP[0], QPP[2]) == 1 && gcd (QPP[1], QPP[2]) == 1) {	// gcd (QPP) = 1
 					mpz_set_si (Delta, QPP[1]*QPP[1] - 4*QPP[2]);											// Delta = P1^2 - 4P2
 					mpz_set_si (E, (QPP[2] + 4*QPP[0]) * (QPP[2] + 4*QPP[0]) - 4*QPP[0]*QPP[1]*QPP[1]);		// E = (P2+4Q)^2 - 4QP1^2
@@ -104,25 +108,62 @@ _Bool find_QPP_7_2_4 (int QPP[3], mpz_t N) {
 						return 1;
 					}
 				}
+				QPP[2] = -QPP[2];
 				if (QPP[2] > 0) {
-					QPP[2] = -QPP[2];				// P2 = 1 , -1, 2, -2, 3, ...
-				}
-				else {
-					QPP[2] = -QPP[2] + 1;
+					QPP[2] += 1;					// P2 = 1 , -1, 2, -2, 3, ...
 				}
 			}
+			QPP[1] = -QPP[1];
 			if (QPP[1] > 0) {
-				QPP[1] = -QPP[1];					// P1 = 1 , -1, 2, -2, 3, ...
-			}
-			else {
-				QPP[1] = -QPP[1] + 1;
+				QPP[1] += 1;						// P1 = 1 , -1, 2, -2, 3, ...
 			}
 		}
+		QPP[0] = -QPP[0];
 		if (QPP[0] > 0) {
-			QPP[0] = -QPP[0];						// Q = 1 , -1, 2, -2, 3, ...
+			QPP[0] += 1;							// Q = 1 , -1, 2, -2, 3, ...
 		}
-		else {
-			QPP[0] = -QPP[0] + 1;
+	}
+	mpz_clear (Delta);
+	mpz_clear (E);
+	return 0;
+}
+
+/*			Get appropreate values of Q, P1 and P2 for theorem 7.2 / 7.4
+Parameters:
+	N	N = Ar^n + eta*gamma_n(r). Selection must result in Jacobi(Delta, N) = Jacobi(E, N) = -1 where Delta = P1^2 - 4P2 and E = (P2+4Q)^2 - 4QP1^2
+	
+Returns:
+	QPP		integer array [Q, P1, P2] such that Jacobi(Delta, N) = Jacobi(E, N) = -1 where Delta = P1^2 - 4P2 and E = (P2+4Q)^2 - 4QP1^2
+
+Runtime:	O(1)
+	jacobi with small integers (absolute size < 100 each)
+*/
+_Bool try_best_QPP_7_2_4(int QPP[3], mpz_t N) {
+	mpz_t Delta; mpz_init (Delta);		// Delta = P1^2 - 4P2
+	mpz_t E; mpz_init (E);				// E = (P2+4Q)^2 - 4QP1^2
+	int MAX_VAL = MAX_ABSOLUTE_Q_P1_P2_SIZE;
+	for (int i = 0; i <= MAX_VAL; i++) {
+		QPP[0] = i * i;
+		for (QPP[1] = 1; QPP[1] < MAX_VAL;) {
+			for (QPP[2] = 1; QPP[2] < MAX_VAL;) {
+				if (gcd (QPP[0], QPP[1]) == 1 && gcd (QPP[0], QPP[2]) == 1 && gcd (QPP[1], QPP[2]) == 1) {	// gcd (QPP) = 1
+					mpz_set_si (Delta, QPP[1]*QPP[1] - 4*QPP[2]);											// Delta = P1^2 - 4P2
+					mpz_set_si (E, (QPP[2] + 4*QPP[0]) * (QPP[2] + 4*QPP[0]) - 4*QPP[0]*QPP[1]*QPP[1]);		// E = (P2+4Q)^2 - 4QP1^2
+					if ((mpz_jacobi(Delta, N) == -1) && (mpz_jacobi(E, N) == -1)) {							// if Jacobi (Delta/N) = Jacobi (E/N) = -1
+						mpz_clear (Delta);
+						mpz_clear (E);
+						return 1;
+					}
+				}
+				QPP[2] = -QPP[2];
+				if (QPP[2] > 0) {
+					QPP[2] += 1;					// P2 = 1 , -1, 2, -2, 3, ...
+				}
+			}
+			QPP[1] = -QPP[1];
+			if (QPP[1] > 0) {
+				QPP[1] += 1;						// P1 = 1 , -1, 2, -2, 3, ...
+			}
 		}
 	}
 	mpz_clear (Delta);
@@ -492,9 +533,9 @@ int primality_test_7_5 (int A, int n, int eta) {
 		}
 	}
 	int QPP[3];
-	if (!find_QPP_7_5 (QPP, tmp_val[0], N)) {									// if inversion fails
+	if (!find_QPP_7_5 (QPP, tmp_val[0], N)) {
 //gmp_printf("Couldn't find Q, P1, and P2 for n = %d. Not implemented.\n", n);
-		return 0;
+		return primality_test_7_2_4 (A, r, n, eta);								// slower than this method but no chance of failure on find_QPP
 	}
 	int Delta = QPP[1]*QPP[1] - 4*QPP[2];										// Delta = P1^2 - 4P2
 	mpz_t S_i; mpz_init (S_i);

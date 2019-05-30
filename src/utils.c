@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <math.h>
 #include "utils.h"
+#include "RWG2.h"
+#include "RWG7.h"
+#include "ptestio.h"
 
 /*			multiplication for numbers a + b * sqrt(c) where x_c = y_c
 Parameters:
@@ -184,6 +187,14 @@ int gcd(int x, int y) {
 	return x;
 }
 
+_Bool isSquare(int x) {
+	float root_x = sqrt(x);
+	if (((int) root_x) == root_x && x >= 0) {
+		return 1;
+	}
+	return 0;
+}
+
 //	Comparison of two integers for use with qsort (equivalent to <)
 int cmp (const void * a, const void * b) {
 	return (*(int *)a - *(int *)b);
@@ -224,7 +235,7 @@ Runtime:	O(p_n * M(A * r^(p_n)))
 
 Note that initial size of not_to_run should be 2*n
 */
-int get_not_to_run_2_8_10 (int * not_to_run, int A, int r, int n, int y) {
+int get_not_to_run_2_8_10 (int * not_to_run, mpz_t A, int r, int n, int y) {
 	FILE *f = fopen ("primessmall.txt", "r");
 	if (f == NULL) {printf("Error opening file.\n"); return -1;}
 	int size_not_to_run = 0;
@@ -238,7 +249,7 @@ int get_not_to_run_2_8_10 (int * not_to_run, int A, int r, int n, int y) {
 		if (p >= n) {
 			break;
 		}
-		mpz_set_ui (test_N, A % p);
+		mpz_tdiv_r_ui (test_N, A, p);
 		if (y == 1) {
 			mpz_add_ui (test_N, test_N, 1);
 		}
@@ -281,7 +292,7 @@ int get_not_to_run_2_8_10 (int * not_to_run, int A, int r, int n, int y) {
 	return size_not_to_run;
 }
 
-int get_n_to_run_2_8_10 (int * to_run, int A, int r, int n, int nf, int y) {
+int get_n_to_run_2_8_10 (int * to_run, mpz_t A, int r, int n, int nf, int y) {
 	int *not_to_run = (int *) malloc(sizeof(int) * 2 * nf);						// get p, x, z such that A*r^x+y = 0 (mod p) and r^z = 1 (mod p)
 	int size_not_to_run = get_not_to_run_2_8_10 (not_to_run, A, r, nf, y);	// no n = x+kz for any integer k should be tested (all divisble by p)
 	int k = 0;
@@ -302,6 +313,144 @@ int get_n_to_run_2_8_10 (int * to_run, int A, int r, int n, int nf, int y) {
 	}
 	to_run = (int *) realloc (to_run, sizeof(int) * size_to_run);
 	return size_to_run;
+}
+
+int LARGEST_IN_SMALL_PRIMES = 15485863;
+/*
+Parameters:
+	fileStr			file to output results to
+	test_num		2 => do tests from section 2 of RWG, 7 => tests from section 7
+	A, r, y_eta		integers as described in RWG Theorems 2.8, 2.10, 7.2, 7.4, 7.5
+	n, nf			test for primes using above constants and exponent n, n+1, n+2, ... , nf-2, nf-1, nf
+*/
+void OEIS_testing (char * fileStr, int test_num, int A, int r, int n, int nf, int y_eta) {
+	if (test_num == 2) {															// do the tests from section 2
+		mpz_t N; mpz_init (N);
+		while (n < (log(LARGEST_IN_SMALL_PRIMES - y_eta)-log(A))/log(r)) {				// if the potential prime is <= this big it will be in smallPrimes.txt
+			mpz_ui_pow_ui (N, r, n);
+//gmp_printf("here");
+			mpz_mul_ui (N, N, A);
+//gmp_printf("here");
+			if (y_eta == 1) {
+				mpz_add_ui (N, N, 1);
+			}
+			else {
+				mpz_sub_ui (N, N, 1);
+			}						// N = A*r^n+y
+			int divRes = trial_div(N, 0);
+			if (divRes) {			// trial division by first million primes (can change 0 to any number between 1 and 1,000,000 to only try dividing by that many primes)
+				if (mpz_cmpabs_ui (N, divRes) == 0) {
+					printf("\n\nPrime for exponent = %d\n\n", n);
+					add_prime_file_OEIS(n, fileStr);			// add to file
+				}
+			}
+			printf("%d,", n);
+			fflush(stdout);
+			n++;
+		}
+		mpz_clear(N);
+		mpz_t Az; mpz_init (Az);
+		mpz_set_ui (Az, A);
+		int *to_run = (int *) calloc((nf - n + 1), sizeof(int));
+		int size_to_run = get_n_to_run_2_8_10 (to_run, Az, r, n, nf, y_eta);
+		if (r == 2) {
+			for (int i = 0; i < size_to_run; i++) {
+				if (primality_test_2_10 (Az, to_run[i], y_eta) == 1) {
+					printf("\n\nPrime for exponent = %d\n\n", to_run[i]);
+					add_prime_file_OEIS(to_run[i], fileStr);			// add to file
+				}
+				printf("%d,", to_run[i]);
+				fflush(stdout);
+			}
+		}
+		else {
+			for (int i = 0; i < size_to_run; i++) {
+				if (primality_test_2_8 (Az, r, to_run[i], y_eta) == 1) {
+					printf("\n\nPrime for exponent = %d\n\n", to_run[i]);
+					add_prime_file_OEIS(to_run[i], fileStr);			// add to file
+				}
+				printf("%d,", to_run[i]);
+				fflush(stdout);
+			}
+		}
+		mpz_clear (Az);
+	}
+	else {																// use the tests from section 7
+		if (r == 2 || (r%4 != 1)) {
+			printf ("Section 7 primality tests do not apply to r = 2 or r = 1 (mod 4)\n");
+			return;
+		}
+		if (r == 5) {
+			while (n <= nf) {
+				if (primality_test_7_5 (A, n, y_eta) == 1) {			// specific to r = 5
+					printf("\n\nPrime for exponent = %d\n\n", n);
+					add_prime_file_OEIS(n, fileStr);			// add to file						}
+				}
+				else {
+					printf("%d,", n);
+				}
+				fflush(stdout);
+				n++;
+			}
+		}
+		else {			// use primality testing from both Theorem 7.2 and 7.4 as they require computing the same sequences are have the same requirements
+			while (n <= nf) {
+				if (primality_test_7_2_4 (A, r, n, y_eta) == 1) {
+					printf("\n\nPrime for exponent = %d\n\n", n);
+					add_prime_file_OEIS(n, fileStr);			// add to file
+				}
+				else {
+					printf("%d,", n);
+				}
+				fflush(stdout);
+				n++;
+			}
+		}
+	}
+	printf("\n");
+	return;
+}
+
+void SIDH_testing (char * fileStr, int bit_length, int r) {
+	mpz_t A; mpz_init (A);
+	for (int x = (bit_length / 2) - 20; x < bit_length / 2; x++) {
+		int y;
+		for (y = (int) floor((bit_length / 2) / log2(r)) - 20; y < (x-1)/log2(r) + 2; y++) {
+			if (y < 0) {
+				continue;
+			}
+			for (int f = 1; f < 100; f++) {
+				if (f%r == 0) {
+					break;
+				}
+				mpz_set_ui (A, f);
+				mpz_mul_2exp (A, A, x);
+				if (primality_test_2_8 (A, r, y, -1) == 1) {
+					printf("\n\nPrime for values: f = %d, x = %d, y = %d\n\n", f, x, y);
+					add_prime_file_SIDH(f, x, y, fileStr);				// add to file
+				}
+				printf("%d/%d/%d,", f, x, y);
+				fflush(stdout);
+			}
+		}
+		for ( ; y < bit_length / 2; y++) {
+			for (int f = 1; f < 100; f+=2) {
+				mpz_ui_pow_ui (A, r, y);
+				mpz_mul_ui (A, A, f);
+				if (primality_test_2_10 (A, x, -1) == 1) {
+					printf("\n\nPrime for values: f = %d, x = %d, y = %d\n\n", f, x, y);
+					add_prime_file_SIDH(f, x, y, fileStr);				// add to file
+				}
+				printf("%d/%d/%d,", f, x, y);
+				fflush(stdout);
+			}
+		}
+	}
+	// select A = f * 2^x, r^n such that r^n has about x bits (>x => use 2.8 else use 2.10)
+	// can use small f, want 
+	mpz_clear (A);
+	printf("\n");
+	return;
 }
 
 

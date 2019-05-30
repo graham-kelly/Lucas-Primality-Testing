@@ -20,7 +20,8 @@ takes an array of mpz_t elements and fills them with the coefficients of g_r(x)
 g_r(x) = sum(j = 0...k) [ (r/2j+1) * binomial_coef(k+j, k-j) * delta^j * x^(2j+1) ]
 where k = (r-1)/2 computing the k+1 coefficients and storing them in coefficients
 Runtime:	O(r*log(N)^2)
-	r inversions (mod N)
+	(r-1)/2 inversions (mod N) on numbers <(r-1)/2
+	this method is very fast in practice as the inversion step has a very small argument (extended euclidean algorithm on small value and N)
 */
 _Bool get_g_r_coef (mpz_t coefficients[], int r, int d, mpz_t N) {
 	int k = (r-1)/2;												// note r is an odd prime (this is exact)
@@ -74,7 +75,7 @@ void find_p_q (int arr[3], mpz_t N, short y) {
 		while (q <= max_val && d > 0) {									// q = 1, -1, 2, -2, 3, -3, ...
 			mpz_set_si (tmp_val[0], d);
 			mpz_set_si (tmp_val[1], q);
-			if (y == mpz_jacobi (tmp_val[0], N) && 1 == mpz_jacobi(tmp_val[1], N)) {						// gamma = jacobi(d,N) this doesn't make sense...
+			if (y == mpz_jacobi (tmp_val[0], N) && 1 == mpz_jacobi(tmp_val[1], N) && !isSquare(d)) {						// gamma = jacobi(d,N)? (typo in paper?)
 				arr[0] = p;												//set up return values
 				arr[1] = q;
 				arr[2] = d;
@@ -127,18 +128,19 @@ must have the form 2kr^alpha + y. Also if A<= 2r^(2alpha-n)
 then N is prime
 Runtime:	O(min(r * log(N)^2, log(log(N)) * log(N)^2))
 */
-int primality_test_2_8 (int A, int r, int n, short y) {
+int primality_test_2_8 (mpz_t A, int r, int n, short y) {
 	mpz_t N; mpz_init(N);
 	mpz_t tmp_val; mpz_init(tmp_val);
 	mpz_ui_pow_ui (tmp_val, r, n);
-	mpz_mul_ui (N, tmp_val, A);
+	mpz_mul (N, tmp_val, A);
 	if (y == 1) {
 		mpz_add_ui (N, N, 1);										// N = A * r^n + y
 	}
 	else {
 		mpz_sub_ui (N, N, 1);										// N = A * r^n + y
 	}
-	if (mpz_cmp_ui (tmp_val, A/2) < 0 || y*y != 1 || A%2 != 0) {	// if A > 2r^n or gamma^2 != 1 or A is odd
+	mpz_mul_ui (tmp_val, tmp_val, 2);
+	if (mpz_cmp (tmp_val, A) < 0 || y*y != 1 || !mpz_divisible_2exp_p(A,1)) {		// if A > 2r^n or gamma^2 != 1 or A is odd
 		mpz_clear(N);
 		mpz_clear(tmp_val);
 		return -1;													// test doesn't apply
@@ -206,7 +208,7 @@ int primality_test_2_8 (int A, int r, int n, short y) {
 	else {
 		mpz_ui_pow_ui (tmp_val, r, 2 * a - n);
 		mpz_mul_ui (tmp_val, tmp_val, 2);							//tmp_val = 2r^(2a-n)
-		if (mpz_cmp_ui (tmp_val, A) <= 0) {							//if (A > 2r^(2i-n))
+		if (mpz_cmp (tmp_val, A) <= 0) {							//if (A > 2r^(2i-n))
 			//gmp_printf("%d * %d^%d + %d may be prime. Prime divisors would have the form %d * %d * %d^(%d) +/- 1.\n", A, r, n, y, r, (r-1)/2, r, a);
 			mpz_clear (N);
 			mpz_clear (tmp_val);
@@ -246,18 +248,18 @@ k*2^a +/- 1. Also if A < 2^(2a-n)-1, then N is a prime
 Runtime:	O(log(N)^2)
 	2 inversions in get_r0_r1 dominate
 */
-short primality_test_2_10 (int A, int n, short y) {
+int primality_test_2_10 (mpz_t A, int n, short y) {
 	short result = 1;												// assume the number is prime until found composite
-	if (A % 2 == 0 || y*y != 1) {
+	if (mpz_divisible_2exp_p(A,1) || y*y != 1) {
 		return -1;													// test doesn't apply
 	}
 	mpz_t N; mpz_init(N);
 	mpz_t tmp_val; mpz_init(tmp_val);
 	mpz_ui_pow_ui (tmp_val, 2, n);									// tmp_val = 2^n
-	if (mpz_cmp_ui (tmp_val, A) < 0) {								// if A >= 2^n
+	if (mpz_cmp (tmp_val, A) < 0) {								// if A >= 2^n
 		return -1;													// test doesn't apply
 	}
-	mpz_mul_ui (N, tmp_val, A);
+	mpz_mul (N, tmp_val, A);
 	if (y == 1) {
 		mpz_add_ui (N, N, 1);										// N = A * r^n + y
 	}
@@ -309,7 +311,8 @@ short primality_test_2_10 (int A, int n, short y) {
 		return 0;													// then N is composite
 	}
 	mpz_ui_pow_ui (tmp_val, 2, 2*a-n);
-	if (mpz_cmp_ui (tmp_val, A + 1) < 0) {
+	mpz_sub_ui (tmp_val, tmp_val, 1);
+	if (mpz_cmp (tmp_val, A) < 0) {
 		//gmp_printf("%d * 2^%d + %d may be prime. Prime divisors would have the form k 2^(%d) +/- 1.\n", A, n, y, a);
 		mpz_clear (N);
 		mpz_clear (tmp_val);

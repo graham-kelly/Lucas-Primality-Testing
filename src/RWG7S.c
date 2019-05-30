@@ -85,7 +85,7 @@ mpz_mod (W_i[0], W_i[0], N); mpz_mod (W_i[1], W_i[1], N); mpz_mod (W_i[2], W_i[2
 		}
 mpz_mod (W_i[0], W_i[0], N); mpz_mod (W_i[1], W_i[1], N); mpz_mod (W_i[2], W_i[2], N); mpz_mod (W_i[3], W_i[3], N); 
 	}
-	mpz_mod (L_m, W_i[0], N);			//should this be W_i[2] and [3] ?
+	mpz_mod (L_m, W_i[0], N);
 	mpz_mod (K_m, W_i[1], N);
 	mpz_clear (L_1);
 	mpz_clear (K_1);
