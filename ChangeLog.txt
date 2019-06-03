@@ -32,11 +32,15 @@
 		changed get_H_k to get_HI_k, now computes H(X,Y) and I(X,Y) = H(Y,X)
 			this adds a few additional multiplications but halves the number of calls to the function needed
 
+2019/05/16
+	Added function to cycle through SIDH compatable primes
+
+2019/05/30
+	code to remove failure chance in find_QPP_7_5
+	in get_QPP_7_2_4 prioritized values of QPP so that Q is a perfect square
+	
 
 
 
 Future Updates
-	code to remove failure chance in find_QPP_7_5
-	main function for SIDH prime finding
-	in get_QPP_7_2_4 prioritize values of QPP so that Q is a perfect square or P1^2-4P2=0
-	
+	More selectivity for f values in SIDH prime finding method could be added
