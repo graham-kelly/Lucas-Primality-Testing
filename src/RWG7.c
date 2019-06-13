@@ -11,6 +11,11 @@ static const int P_ipq_table[12][3] =	{{11,-89,1199},{31,-409,22289},{41,981,239
 										{151,596,-4423696},{181,1691,-7254661},{191,1331,-18326641},
 										{211,961,-24801151},{241,-3344,1283084}};
 
+#define outer_sum1 tmp_val[2]
+#define inner_sum1 tmp_val[3]
+#define outer_sum2 tmp_val[4]
+#define inner_sum2 tmp_val[5]
+
 /*			Evaluate the polynomial H_k(X,Y), I_k(X,Y) (mod N)
 Parameters:
 	X	the first argument to the H_k polynomial defined in section 4 of RWG
@@ -24,14 +29,9 @@ Returns:
 Runtime:	O(log(r) * r^2 * M(N))
 	k = (r-1)/2 and most expensive operation is exponentiation in nested loop
 */
-void get_HI_k (mpz_t rop1, mpz_t rop2, mpz_t X, mpz_t Y, int k, mpz_t N) {
+void get_HI_k (mpz_t rop1, mpz_t rop2, mpz_t X, mpz_t Y, int k, mpz_t N, mpz_t tmp_val[6]) {
 	int i;
 	int j = 0;
-	mpz_t outer_sum1; mpz_init (outer_sum1);
-	mpz_t inner_sum1; mpz_init (inner_sum1);
-	mpz_t outer_sum2; mpz_init (outer_sum2);
-	mpz_t inner_sum2; mpz_init (inner_sum2);
-	mpz_t tmp_val[2]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);
 	mpz_set_ui (outer_sum1, 0);
 	mpz_set_ui (outer_sum2, 0);
 	while (j <= k) {
@@ -67,11 +67,6 @@ void get_HI_k (mpz_t rop1, mpz_t rop2, mpz_t X, mpz_t Y, int k, mpz_t N) {
 	}
 	mpz_mod (rop1, outer_sum1, N);
 	mpz_mod (rop2, outer_sum2, N);
-	mpz_clear (outer_sum1);
-	mpz_clear (inner_sum1);
-	mpz_clear (outer_sum2);
-	mpz_clear (inner_sum2);
-	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
 }
 
 #define MAX_ABSOLUTE_Q_P1_P2_SIZE 100;
@@ -338,7 +333,7 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 		return -1;
 	}
 	mpz_t gamma_n_r; mpz_init (gamma_n_r);
-	mpz_t tmp_val[2]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);
+	mpz_t tmp_val[8]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);
 	mpz_set_si (tmp_val[0], -1);
 	mpz_set_ui (tmp_val[1], r);
 	if (! h_lift_root (gamma_n_r, tmp_val[0], tmp_val[1], n)) {							// = sqrt(-1) if r^n = 1 (mod 4)
@@ -395,6 +390,7 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 		return 0;
 	}
 	int alpha = 0;
+	mpz_init(tmp_val[2]); mpz_init(tmp_val[3]); mpz_init(tmp_val[4]); mpz_init(tmp_val[5]); mpz_init(tmp_val[6]); mpz_init(tmp_val[7]);
 	while (alpha++ < n) {														// alpha = 1 ... n
 		mpz_set (S_im1, RST_i[1]);
 		get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, N);
@@ -404,7 +400,7 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 			mpz_clear (N);
 			mpz_clear (rEXPn);
 			mpz_clear (gamma_n_r);
-			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
+			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]); mpz_clear (tmp_val[3]); mpz_clear (tmp_val[4]); mpz_clear (tmp_val[5]); mpz_clear (tmp_val[6]); mpz_clear (tmp_val[7]);
 			mpz_clear (RST_i[0]); mpz_clear (RST_i[1]); mpz_clear (RST_i[2]);
 			mpz_clear (S_im1);
 			return 0;
@@ -423,7 +419,7 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 		mpz_sub_ui (tmp_val[0], tmp_val[0], 4);
 		mpz_clear (rEXPn);
 		mpz_clear (gamma_n_r);
-		mpz_clear (tmp_val[1]);
+		mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]); mpz_clear (tmp_val[3]); mpz_clear (tmp_val[4]); mpz_clear (tmp_val[5]); mpz_clear (tmp_val[6]); mpz_clear (tmp_val[7]);
 		mpz_clear (RST_i[0]); mpz_clear (RST_i[2]);
 		mpz_clear (S_im1);
 		if (mpz_divisible_p(tmp_val[0], N) && mpz_divisible_p(RST_i[1], N)) {				// if N | T_n^2 -4 and S_n
@@ -451,7 +447,7 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 	mpz_clear (N);
 	mpz_clear (rEXPn);
 	mpz_clear (gamma_n_r);
-	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
+	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]); mpz_clear (tmp_val[3]); mpz_clear (tmp_val[4]); mpz_clear (tmp_val[5]); mpz_clear (tmp_val[6]); mpz_clear (tmp_val[7]);
 	mpz_clear (RST_i[0]); mpz_clear (RST_i[1]); mpz_clear (RST_i[2]);
 	mpz_clear (S_im1);
 	return 0;

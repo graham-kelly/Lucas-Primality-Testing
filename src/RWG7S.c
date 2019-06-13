@@ -41,7 +41,6 @@ void get_KL_m (mpz_t K_m, mpz_t L_m, mpz_t m, int QPP[3], mpz_t N) {
 	mpz_mul_ui (W_i[3], W_i[3], 2);													// = K_2
 	int h = mpz_sizeinbase (m, 2);												// get position of leftmost set bit
 	int i = 1;
-mpz_mod (W_i[0], W_i[0], N); mpz_mod (W_i[1], W_i[1], N); mpz_mod (W_i[2], W_i[2], N); mpz_mod (W_i[3], W_i[3], N); 
 	while (i++ < h) {																	// for each bit of m starting from the left
 		mpz_mod (A, W_i[0], N);
 		mpz_mod (B, W_i[1], N);
@@ -83,7 +82,6 @@ mpz_mod (W_i[0], W_i[0], N); mpz_mod (W_i[1], W_i[1], N); mpz_mod (W_i[2], W_i[2
 			mpz_mul (W_i[3], C, D);
 			mpz_mul_ui (W_i[3], W_i[3], 2);											// = W_i[3]
 		}
-mpz_mod (W_i[0], W_i[0], N); mpz_mod (W_i[1], W_i[1], N); mpz_mod (W_i[2], W_i[2], N); mpz_mod (W_i[3], W_i[3], N); 
 	}
 	mpz_mod (L_m, W_i[0], N);
 	mpz_mod (K_m, W_i[1], N);
@@ -230,16 +228,18 @@ Returns:
 Runtime:		log(r) * r^2 * M(N)
 	due to get_H_k
 */
-void get_next_RST_i (mpz_t newRST[3], mpz_t oldRST[3], mpz_t tmp_val[2], int QPP[3], int r, mpz_t N) {
+void get_next_RST_i (mpz_t newRST[3], mpz_t oldRST[3], mpz_t tmp_val[8], int QPP[3], int r, mpz_t N) {
 	int delta = QPP[1] * QPP[1] - 4 * QPP[2];				// = P1^2 - 4*P2
 	int k = (r-1)/2;
-	mpz_mul (tmp_val[0], oldRST[2], oldRST[2]);
-	mpz_mul (tmp_val[1], oldRST[1], oldRST[1]);
-	mpz_mul_si (tmp_val[1], tmp_val[1], delta);
-	mpz_mod (tmp_val[0], tmp_val[0], N);
-	mpz_mod (tmp_val[1], tmp_val[1], N);
-	get_HI_k (newRST[0], tmp_val[0], tmp_val[0], tmp_val[1], k, N);		// R_i+1 = H_k(T_i^2, delta*S_i^2) (mod N)
-	mpz_mul (newRST[2], oldRST[2], tmp_val[0]);							// T_i+1 = T_i * H_k(delta*S_i^2, T_i^2) (mod N)
+	mpz_mul (tmp_val[6], oldRST[2], oldRST[2]);
+	mpz_mul (tmp_val[7], oldRST[1], oldRST[1]);
+	mpz_mul_si (tmp_val[7], tmp_val[7], delta);
+	mpz_mod (tmp_val[6], tmp_val[6], N);
+	mpz_mod (tmp_val[7], tmp_val[7], N);
+//mpz_t tmp_val[6]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]); mpz_init (tmp_val[2]); mpz_init (tmp_val[3]); mpz_init (tmp_val[4]); mpz_init (tmp_val[5]);
+	get_HI_k (newRST[0], tmp_val[6], tmp_val[6], tmp_val[7], k, N, tmp_val);		// R_i+1 = H_k(T_i^2, delta*S_i^2) (mod N)
+//mpz_clear (tmp_val[0]); mpz_clear (tmp_val[7]); mpz_clear (tmp_val[2]); mpz_clear (tmp_val[3]); mpz_clear (tmp_val[4]); mpz_clear (tmp_val[5]);
+	mpz_mul (newRST[2], oldRST[2], tmp_val[6]);							// T_i+1 = T_i * H_k(delta*S_i^2, T_i^2) (mod N)
 	mpz_mul (newRST[1], oldRST[1], newRST[0]);							// S_i+1 = S_i * R_i+1
 	mpz_mod (newRST[0], newRST[0], N);
 	mpz_mod (newRST[1], newRST[1], N);
@@ -268,7 +268,7 @@ Runtime:	O(log(N)^2)
 _Bool get_RST_i (mpz_t rop[3], int i, int QPP[3], int A, int r, mpz_t rEXPn, mpz_t gamma_n_r, int eta, mpz_t N) {
 //		************************************		would probably be more efficient to implement eq 6.8 - 6.10 of RWG here			************************************
 	mpz_t RST[3]; mpz_init (RST[0]); mpz_init (RST[1]); mpz_init (RST[2]);
-	mpz_t tmp_val[2]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);		// allocate space for get_next_RST_i method
+	mpz_t tmp_val[8]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]); mpz_init (tmp_val[2]); mpz_init (tmp_val[3]); mpz_init (tmp_val[4]); mpz_init (tmp_val[5]); mpz_init (tmp_val[6]); mpz_init (tmp_val[7]);		// allocate space for get_next_RST_i method
 	if (!get_RST_0 (RST, A, rEXPn, gamma_n_r, eta, QPP, N)) {					// compute R_0, S_0, T_0
 		return 0;
 	}
@@ -280,7 +280,7 @@ _Bool get_RST_i (mpz_t rop[3], int i, int QPP[3], int A, int r, mpz_t rEXPn, mpz
 	mpz_mod (rop[1], RST[1], N);
 	mpz_mod (rop[2], RST[2], N);
 	mpz_clear (RST[0]); mpz_clear (RST[1]); mpz_clear (RST[2]);
-	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
+	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]); mpz_clear (tmp_val[3]); mpz_clear (tmp_val[4]); mpz_clear (tmp_val[5]); mpz_clear (tmp_val[6]); mpz_clear (tmp_val[7]); 
 	return 1;
 }
 
@@ -367,6 +367,7 @@ void get_next_ST_i (mpz_t S_i, mpz_t T_i, int Delta, mpz_t tmp_val[3], mpz_t N) 
 	mpz_mod (S_i, tmp_val[1], N);
 	mpz_mul (tmp_val[2], tmp_val[2], T_i);
 	mpz_mod (T_i, tmp_val[2], N);
+	return;
 }
 
 

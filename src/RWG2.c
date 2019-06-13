@@ -177,9 +177,11 @@ int primality_test_2_8 (mpz_t A, int r, int n, short y) {
 			return 0;
 		}
 		int i = 0;
+		mpz_t sum_term[2]; mpz_init(sum_term[0]); mpz_init(sum_term[1]);
 		while ((0 != mpz_cmp_ui (tmp_val, 0)) && i++ < n) {			// while s_i != 0
-			get_next_s_i (tmp_val, r, g_r_coef, N);					// finds s_i+1 and stores it in tmp_val
+			get_next_s_i (tmp_val, r, g_r_coef, N, sum_term);		// finds s_i+1 and stores it in tmp_val
 		}
+		mpz_clear (sum_term[0]); mpz_clear (sum_term[1]);
 		if (0 == mpz_cmp_ui (tmp_val, 0) && i <= n) {
 			a = i;													// first value of i such that N !| s_i-1 and N | s_i (i has already been incremented)
 		}

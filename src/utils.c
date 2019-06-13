@@ -187,6 +187,15 @@ int gcd(int x, int y) {
 	return x;
 }
 
+/*			compute and return gcd(x,y)
+Parameters:
+	x		(int) integer to to check if it is square
+Returns:
+	bool	x = k*k for some integer k
+	
+For use with small integers!
+Runtime:	O(1)
+*/
 _Bool isSquare(int x) {
 	float root_x = sqrt(x);
 	if (((int) root_x) == root_x && x >= 0) {
@@ -322,23 +331,25 @@ Parameters:
 	test_num		2 => do tests from section 2 of RWG, 7 => tests from section 7
 	A, r, y_eta		integers as described in RWG Theorems 2.8, 2.10, 7.2, 7.4, 7.5
 	n, nf			test for primes using above constants and exponent n, n+1, n+2, ... , nf-2, nf-1, nf
+Returns:
+	prints results of primality test to file specified in fileStr
+Runtime:	O(log(log(N)) * log(N)^2)						for tests from section 7
+			O(min(r * log(N)^2, log(log(N)) * log(N)^2))	for tests from section 2
 */
 void OEIS_testing (char * fileStr, int test_num, int A, int r, int n, int nf, int y_eta) {
 	if (test_num == 2) {															// do the tests from section 2
 		mpz_t N; mpz_init (N);
 		while (n < (log(LARGEST_IN_SMALL_PRIMES - y_eta)-log(A))/log(r)) {				// if the potential prime is <= this big it will be in smallPrimes.txt
 			mpz_ui_pow_ui (N, r, n);
-//gmp_printf("here");
 			mpz_mul_ui (N, N, A);
-//gmp_printf("here");
 			if (y_eta == 1) {
 				mpz_add_ui (N, N, 1);
 			}
 			else {
 				mpz_sub_ui (N, N, 1);
 			}						// N = A*r^n+y
-			int divRes = trial_div(N, 0);
-			if (divRes) {			// trial division by first million primes (can change 0 to any number between 1 and 1,000,000 to only try dividing by that many primes)
+			int divRes = trial_div(N, 0);			// trial division by first million primes (can change 0 to any number between 1 and 1,000,000 to only try dividing by that many primes)
+			if (divRes) {
 				if (mpz_cmpabs_ui (N, divRes) == 0) {
 					printf("\n\nPrime for exponent = %d\n\n", n);
 					add_prime_file_OEIS(n, fileStr);			// add to file
@@ -411,17 +422,50 @@ void OEIS_testing (char * fileStr, int test_num, int A, int r, int n, int nf, in
 	return;
 }
 
+/*
+Parameters:
+	fileStr			file to output results to
+	bit_length		2 => do tests from section 2 of RWG, 7 => tests from section 7
+	r				integer as described in RWG Theorems 2.8, 2.10
+Returns:
+	prints results of primality test to file specified in fileStr
+Runtime:	O(bit_length * min(r * log(N)^2, log(log(N)) * log(N)^2))
+*/
 void SIDH_testing (char * fileStr, int bit_length, int r) {
 	mpz_t A; mpz_init (A);
-	for (int x = (bit_length / 2) - 20; x < bit_length / 2; x++) {
-		int y;
-		for (y = (int) floor((bit_length / 2) / log2(r)) - 20; y < (x-1)/log2(r) + 2; y++) {
-			if (y < 0) {
-				continue;
+	double log2r = log2(r);
+	int x = 0;
+	int y;
+	if (bit_length - 40 > 0) {
+		x = (bit_length / 2) - 20;
+	}
+	while (x < bit_length / 2 + 20) {
+		y = 0;
+		if (bit_length - x - 20 > 0) {
+			y = (int) ceil((bit_length - x - 20) / log2r);
+		}
+		int loopControl = (int) floor ((bit_length - x) / log2r);
+		while (x >= y * log2r && y < loopControl) {
+			int innerLoopControl = bit_length - x - ((int) ceil(y * log2r));
+			for (int f = 1; f < innerLoopControl; f+=2) {
+				if (f % r == 0) {
+					f+=2;
+				}
+				mpz_ui_pow_ui (A, r, y);
+				mpz_mul_ui (A, A, f);
+				if (primality_test_2_10 (A, x, -1) == 1) {
+					printf("\n\nPrime for values: f = %d, x = %d, y = %d\n\n", f, x, y);
+					add_prime_file_SIDH(f, x, y, fileStr);				// add to file
+				}
+				printf("%d/%d/%d,", f, x, y);
 			}
-			for (int f = 1; f < 100; f++) {
-				if (f%r == 0) {
-					break;
+			y++;
+		}
+		while (y < loopControl) {
+			int innerLoopControl = bit_length - x - ((int) ceil(y * log2r));
+			for (int f = 1; f < innerLoopControl; f+=2) {
+				if (f % r == 0) {
+					f+=2;
 				}
 				mpz_set_ui (A, f);
 				mpz_mul_2exp (A, A, x);
@@ -430,21 +474,11 @@ void SIDH_testing (char * fileStr, int bit_length, int r) {
 					add_prime_file_SIDH(f, x, y, fileStr);				// add to file
 				}
 				printf("%d/%d/%d,", f, x, y);
-				fflush(stdout);
 			}
+			y++;
 		}
-		for ( ; y < bit_length / 2; y++) {
-			for (int f = 1; f < 100; f+=2) {
-				mpz_ui_pow_ui (A, r, y);
-				mpz_mul_ui (A, A, f);
-				if (primality_test_2_10 (A, x, -1) == 1) {
-					printf("\n\nPrime for values: f = %d, x = %d, y = %d\n\n", f, x, y);
-					add_prime_file_SIDH(f, x, y, fileStr);				// add to file
-				}
-				printf("%d/%d/%d,", f, x, y);
-				fflush(stdout);
-			}
-		}
+		x++;
+		fflush(stdout);													// ensure to inform the user of progress
 	}
 	// select A = f * 2^x, r^n such that r^n has about x bits (>x => use 2.8 else use 2.10)
 	// can use small f, want 

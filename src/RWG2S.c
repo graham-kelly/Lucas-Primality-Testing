@@ -148,26 +148,22 @@ Parameters:
 	r	small odd prime integer
 	tmp_val		array of (r-1)/2 + 1 coefficients for the g_r(x) function
 	N	N = Ar^n+gamma
+	mpz_t sum_term[2]	memory preallocated for sum and term variables needed (this funtion will be called many times in a row)
 
 Returns:
 	s_(i+1)		= g_r(s_i), as defined in RWG section 2
 Runtime:	O(r * M(N))
 */
-void get_next_s_i(mpz_t s_i, int r, mpz_t tmp_val[], mpz_t N) {
-	mpz_t sum; mpz_init (sum);
-	mpz_set_ui (sum, 0);
-	mpz_t term; mpz_init (term);
+void get_next_s_i(mpz_t s_i, int r, mpz_t g_r_coef[], mpz_t N, mpz_t sum_term[]) {
+	mpz_set_ui (sum_term[0], 0);
 	int k = (r-1)/2;
-	int j = 0;
-	while (j <= k) {
-		mpz_powm_ui (term, s_i, 2 * j + 1, N);						// term = s_i^(2j+1) (mod N)
-		mpz_mul (term, term, tmp_val[j]);
-		mpz_add (sum, sum, term);									// max value for sum is k*N^2 => only use oen mod operation at the end
-		j++;
+	for (int j = 0; j <= k; j++) {
+		mpz_powm_ui (sum_term[1], s_i, 2 * j + 1, N);						// term = s_i^(2j+1) (mod N)
+		mpz_mul (sum_term[1], sum_term[1], g_r_coef[j]);
+		mpz_add (sum_term[0], sum_term[0], sum_term[1]);					// max value for sum is k*N^2 => only use oen mod operation at the end
 	}
-	mpz_mod (s_i, sum, N);											// set s_i = sum (mod N)
-	mpz_clear (sum);
-	mpz_clear (term);
+	mpz_mod (s_i, sum_term[0], N);											// set s_i = sum (mod N)
+	return;
 }
 
 /*			Get corresponding lucas sequence term (RWG section 1)
