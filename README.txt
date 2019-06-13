@@ -18,3 +18,15 @@ gamma/eta	+/-1
 
 integers such that N is prime will be printed to an appropreately named file (A * r^n +/- 1.txt or A * r^n +/- gamma_r.txt) in the res folder
 possible prime numbers will have n printed to the terminal window plus some additional constraints found
+
+Alternatively, this program can find prime numbers that may be useful for the SIDH cryptosystem using the same primality testing algorithms.
+In this case run
+
+./main bit_length r
+
+to find N such that
+N = f * 2^x * r^y - 1 is prime
+for integers f, x, y where |r^y| ~= x bits and |N| ~< bit_length bits
+
+Such integers will be printed to an appropreately named file (SIDH-bit_length bit: f*2^x*r^y-1.txt)
+The numbers in the file in each line will be f,x,y for a prime N
