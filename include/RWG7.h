@@ -1,7 +1,7 @@
 #ifndef GET_H_K_H_
 #define GET_H_K_H_
 
-void get_HI_k (mpz_t rop1, mpz_t rop2, mpz_t X, mpz_t Y, int k, mpz_t N);
+void get_HI_k (mpz_t rop1, mpz_t rop2, mpz_t X, mpz_t Y, int k, mpz_t N, mpz_t tmp_val[6]);
 
 #endif		//GET_H_K_H_
 

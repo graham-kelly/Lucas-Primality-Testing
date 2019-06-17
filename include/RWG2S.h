@@ -22,7 +22,7 @@ int get_s0 (mpz_t s0, mpz_t A, short y, mpz_t N);
 #ifndef GET_NEXT_S_I_H_
 #define GET_NEXT_S_I_H_
 
-void get_next_s_i(mpz_t x, int r, mpz_t constants[], mpz_t N);
+void get_next_s_i(mpz_t x, int r, mpz_t g_r_coef[], mpz_t N, mpz_t sum_term[]);
 
 #endif		//GET_NEXT_S_I_H_
 
