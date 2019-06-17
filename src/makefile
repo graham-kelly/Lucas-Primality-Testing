@@ -7,10 +7,10 @@ LDIR =../gmp-6.1.2/inc
 
 LIBS=-lm -lgmp
 
-_DEPS = roots.h utils.h RWG2.h RWG2S.h RWG7.h RWG7S.h ptestio.h
+_DEPS = roots.h utils.h RWG2.h RWG2S.h RWG7.h RWG7S.h ptest.h primalityRWG.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = main.o roots.o utils.o RWG2.o RWG2S.o RWG7.o RWG7S.o ptestio.o
+_OBJ = main.o roots.o utils.o RWG2.o RWG2S.o RWG7.o RWG7S.o ptest.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 
