@@ -4,207 +4,26 @@
 #include <math.h>
 #include <string.h>
 #include "primalityRWG.h"
+#include "utils.h"
+#include "ptest.h"
 
-//	Adds prime's exponent to correct .txt file
-void add_prime_file_OEIS(int exp, char * fileStr) {
-	FILE * f = fopen (fileStr, "a");
-	if (f == NULL) {
-		printf ("Error oepning file:\n\t%s\nn = %d is prime\n", fileStr, exp);
-		return;
+int run_tests (int n_arg, char *args[]) {
+	char fileStr[100];
+	if (n_arg == 7) {
+		get_file_name_OEIS (fileStr, args);
+		printf("%s\n",fileStr + 7);
+		OEIS_testing (fileStr, atoi(args[1]),atoi(args[2]), atoi(args[3]), atoi(args[4]), atoi(args[5]), atoi(args[6]));
+		remove_dup_file(fileStr);
+		return 0;
 	}
-	fprintf (f, "%d\n", exp);
-	fclose(f);
-	return;
-}
-
-//	Adds prime's exponent to correct .txt file
-void add_prime_file_SIDH(int f, int x, int y, char * fileStr) {
-	FILE * file = fopen (fileStr, "a");
-	if (file == NULL) {
-		printf ("Error oepning file:\n\t%s\nf = %d, x = %d, y = %d is prime\n", fileStr, f, x, y);
-		return;
+	if (n_arg == 3) {
+		get_file_name_SIDH (fileStr, args);
+		printf("%s\n",fileStr + 7);
+		SIDH_testing(fileStr, atoi(args[1]), atoi(args[2]));
+		return 0;
 	}
-	fprintf (file, "%d, %d, %d\n", f, x, y);
-	fclose(file);
-	return;
-}
-
-//	Comparison of two integers for use with qsort (equivalent to <)
-int cmp (const void * a, const void * b) {
-	return (*(int *)a - *(int *)b);
-}
-
-//	Removes any duplicated prime's exponents from the specified .txt file
-void remove_dup_file(char * fileStr) {
-	int size = 100;
-	int nPrimes = 0;
-	int * primes = (int *) calloc(size, sizeof(int));
-	FILE * f = fopen (fileStr, "r");
-	if (f == NULL) {printf ("Error opening file, no duplicates removed.\n"); return;}
-	fscanf (f, "%d", primes + nPrimes);
-	while (!feof(f)) {																// get exponents for all the prime numbers found
-		nPrimes++;																	// count number found
-		fscanf (f, "%d", primes + nPrimes);
-		if (nPrimes == size) {														// increase allocation for array of primes' exponents if necessary
-			size *= 2;
-			primes = (int *) realloc (primes, size * sizeof(int));					// should implement error checking as well
-		}
-	}
-	qsort(primes, nPrimes, sizeof(int), cmp);										// sort primes found
-	int current = *primes;
-	int new_size = 1;
-	for (int i = 1; i < nPrimes; i++) {												// for each number
-		if (current != *(primes + i)) {												// if not yet seen
-			current = *(primes + i);												// update current
-			*(primes + new_size) = current;											// update new list of primes
-			new_size++;																// update size of new list of primes
-		}
-	}
-	primes = (int *) realloc (primes, sizeof(int) * new_size);						// reallocate only the necessary memory
-	nPrimes = new_size;
-	f = freopen (fileStr, "w", f);													// overwrite the old file with the new data
-	if (f == NULL) {printf ("Error reopening file, no duplicates removed.\n"); return;}
-	for (int i = 0; i < nPrimes; i++) {
-		fprintf (f, "%d\n", *(primes + i));
-	}
-	fclose(f);
-	return;
-}
-
-//	Converts the parameters passed from command line to a correct fileStr to add newly found primes to
-void get_file_name_OEIS(char * fileStr, char *args[]) {
-	strcpy(fileStr,"../res/");
-	strcat(fileStr,args[2]);					// = A value used
-	strcat(fileStr," x ");
-	strcat(fileStr,args[3]);					// = r value used
-	if (atoi(args[6]) == 1) {					// if gamma / eta is 1
-		strcat(fileStr,"^n + ");
-	}
-	else {
-		strcat(fileStr,"^n - ");
-	}
-	if (atoi(args[1]) == 2) {					// if doing section 2 tests
-		strcat(fileStr,"1.txt");
-	}
-	else {
-		strcat(fileStr,"y_n.txt");
-	}
-	return;
-}
-
-void get_file_name_SIDH(char * fileStr, char * args[]) {
-	strcpy(fileStr,"../res/SIDH ");
-	strcat(fileStr,args[1]);					// = bitlength
-	strcat(fileStr,"-bit: f x 2^n x ");
-	strcat(fileStr,args[2]);					// = r used (small prime)
-	strcat(fileStr,"^m - 1");
-	return;
-}
-
-void print_req_args() {
-	printf("\nFor OEIS testing use command line arguments:\n");
-	printf("\t2/7, A, r, n, nf, gamma/eta\n");
-	printf("\nSection 2 or 7 of RWG\n");
-	printf("A a small positive integer with gcd(A,r) = 1\n");
-	printf("r a small prime\n");
-	printf("n < nf positive integers\n");
-	printf("gamma/eta = +/-1\n\n\n");
-	printf("For SIDH testing use command line arguments:\n");
-	printf("\tBitLength, r\n");
-	printf("Bitlength = total bitlength for prime numbers to be found\n");
-	printf("r a small prime (!=2)\n\n\n");
-	return;
-}
-
-/*	Get information about which groups of n will always give composite numbers for N=Ar^n+y
-Parameters:
-	A,r,n,y		are positive integers as given in RWG section 2 primality tests (theorems 2.8 / 2.10)
-Returns:
-	not_to_run			contains triples of p, x, z such that A*r^x+y = 0 (mod p) and r^z = 1 (mod p)
-	size_not_to_run		
-Runtime:	O(p_n * M(A * r^(p_n))) 
-	where p_n is the nth prime number
-
-Note that initial size of not_to_run should be 2*n
-*/
-int get_not_to_run_2_8_10 (int * not_to_run, mpz_t A, int r, int n, int y) {
-	FILE *f = fopen ("primessmall.txt", "r");
-	if (f == NULL) {printf("Error opening file.\n"); return -1;}
-	int size_not_to_run = 0;
-	int p;
-	mpz_t test_N; mpz_init (test_N);
-	mpz_t rEXPj; mpz_init (rEXPj);
-	_Bool found_x;
-	_Bool found_z;
-	for (int i = 0; i < n; i++) {
-		fscanf (f, "%d", &p);														// get prime from primesSmall
-		if (p >= n) {
-			break;
-		}
-		mpz_tdiv_r_ui (test_N, A, p);
-		if (y == 1) {
-			mpz_add_ui (test_N, test_N, 1);
-		}
-		else {
-			mpz_sub_ui (test_N, test_N, 1);
-		}						// test_N = A+y
-		mpz_set_ui (rEXPj, 1);
-		found_x = 0;
-		found_z = 0;
-		for (int j = 1; j < p; j++) {					// find x, z such that A*r^x+z = 0 (mod p) and r^z = 1 (mod p)
-			if (y == 1) {
-				mpz_sub_ui (test_N, test_N, 1);
-				mpz_mul_ui (test_N, test_N, r);
-				mpz_add_ui (test_N, test_N, 1);
-			}
-			else {
-				mpz_add_ui (test_N, test_N, 1);
-				mpz_mul_ui (test_N, test_N, r);
-				mpz_sub_ui (test_N, test_N, 1);
-			}						// test_N = A*(r^j) + y
-			if (!found_x && mpz_divisible_ui_p (test_N, p)) {
-				*(not_to_run + 2 * size_not_to_run) = j;
-				found_x = 1;
-			}
-			mpz_mul_ui (rEXPj, rEXPj, r);
-			if (!found_z && mpz_congruent_ui_p(rEXPj, 1, p)) {
-				*(not_to_run + 2 * size_not_to_run + 1) = j;
-				found_z = 1;
-			}
-			if (found_x && found_z) {					// not_to_run[size] = (x, z) such that A*r^x+y = 0 (mod p) and r^z = 1 (mod p)
-				size_not_to_run++;
-				break;
-			}
-		}
-	}
-	mpz_clear (test_N);
-	mpz_clear (rEXPj);
-	fclose(f);
-	not_to_run = (int *) realloc (not_to_run, sizeof(int) * 2 * size_not_to_run);
-	return size_not_to_run;
-}
-
-int get_n_to_run_2_8_10 (int * to_run, mpz_t A, int r, int n, int nf, int y) {
-	int *not_to_run = (int *) malloc(sizeof(int) * 2 * nf);						// get p, x, z such that A*r^x+y = 0 (mod p) and r^z = 1 (mod p)
-	int size_not_to_run = get_not_to_run_2_8_10 (not_to_run, A, r, nf, y);	// no n = x+kz for any integer k should be tested (all divisble by p)
-	int k = 0;
-	int exp;
-	for (int i = 0; i < size_not_to_run; i++) {		// for each small prime tested
-		exp = (int) ceil ((n - *(not_to_run + 2 * i)) / (double) *(not_to_run + 2 * i + 1)) * (*(not_to_run + 2 * i + 1)) + *(not_to_run + 2 * i) - n;		// get initial exponent's index (x - n + z*ceil( (n-x)/z) )
-		while (exp < nf - n + 1) {
-			*(to_run + exp) = 1;					// this N with exponent (exp+n) will be divisible by some small prime
-			exp += *(not_to_run + 2 * i + 1);		// add z (next iteration remove new exponent from the list if still in range)
-		}
-	}
-	int size_to_run = 0;
-	for (int i = 0; i < nf - n + 1; i++) {
-		if (!*(to_run + i)) {						// has not been marked as divisible by some x + kz above
-			*(to_run + size_to_run) = i + n;		// this integer should be run
-			size_to_run++;
-		}
-	}
-	to_run = (int *) realloc (to_run, sizeof(int) * size_to_run);
-	return size_to_run;
+	print_req_args();
+	return 1;
 }
 
 int LARGEST_IN_SMALL_PRIMES = 15485863;
@@ -370,20 +189,205 @@ void SIDH_testing (char * fileStr, int bit_length, int r) {
 	return;
 }
 
-int run_tests (int n_arg, char *args[]) {
-	char fileStr[100];
-	if (n_arg == 7) {
-		get_file_name_OEIS (fileStr, args);
-		OEIS_testing (fileStr, atoi(args[1]),atoi(args[2]), atoi(args[3]), atoi(args[4]), atoi(args[5]), atoi(args[6]));
-		remove_dup_file(fileStr);
-		return 0;
+/*	Get information about which groups of n will always give composite numbers for N=Ar^n+y
+Parameters:
+	A,r,n,y		are positive integers as given in RWG section 2 primality tests (theorems 2.8 / 2.10)
+Returns:
+	not_to_run			contains triples of p, x, z such that A*r^x+y = 0 (mod p) and r^z = 1 (mod p)
+	size_not_to_run		
+Runtime:	O(p_n * M(A * r^(p_n))) 
+	where p_n is the nth prime number
+
+Note that initial size of not_to_run should be 2*n
+*/
+int get_not_to_run_2_8_10 (int * not_to_run, mpz_t A, int r, int n, int y) {
+	FILE *f = fopen ("primessmall.txt", "r");
+	if (f == NULL) {printf("Error opening file.\n"); return -1;}
+	int size_not_to_run = 0;
+	int p;
+	mpz_t test_N; mpz_init (test_N);
+	mpz_t rEXPj; mpz_init (rEXPj);
+	_Bool found_x;
+	_Bool found_z;
+	for (int i = 0; i < n; i++) {
+		fscanf (f, "%d", &p);														// get prime from primesSmall
+		if (p >= n) {
+			break;
+		}
+		mpz_tdiv_r_ui (test_N, A, p);
+		if (y == 1) {
+			mpz_add_ui (test_N, test_N, 1);
+		}
+		else {
+			mpz_sub_ui (test_N, test_N, 1);
+		}						// test_N = A+y
+		mpz_set_ui (rEXPj, 1);
+		found_x = 0;
+		found_z = 0;
+		for (int j = 1; j < p; j++) {					// find x, z such that A*r^x+z = 0 (mod p) and r^z = 1 (mod p)
+			if (y == 1) {
+				mpz_sub_ui (test_N, test_N, 1);
+				mpz_mul_ui (test_N, test_N, r);
+				mpz_add_ui (test_N, test_N, 1);
+			}
+			else {
+				mpz_add_ui (test_N, test_N, 1);
+				mpz_mul_ui (test_N, test_N, r);
+				mpz_sub_ui (test_N, test_N, 1);
+			}						// test_N = A*(r^j) + y
+			if (!found_x && mpz_divisible_ui_p (test_N, p)) {
+				*(not_to_run + 2 * size_not_to_run) = j;
+				found_x = 1;
+			}
+			mpz_mul_ui (rEXPj, rEXPj, r);
+			if (!found_z && mpz_congruent_ui_p(rEXPj, 1, p)) {
+				*(not_to_run + 2 * size_not_to_run + 1) = j;
+				found_z = 1;
+			}
+			if (found_x && found_z) {					// not_to_run[size] = (x, z) such that A*r^x+y = 0 (mod p) and r^z = 1 (mod p)
+				size_not_to_run++;
+				break;
+			}
+		}
 	}
-	if (n_arg == 3) {
-		get_file_name_SIDH (fileStr, args);
-		SIDH_testing(fileStr, atoi(args[1]), atoi(args[2]));
-		return 0;
+	mpz_clear (test_N);
+	mpz_clear (rEXPj);
+	fclose(f);
+	not_to_run = (int *) realloc (not_to_run, sizeof(int) * 2 * size_not_to_run);
+	return size_not_to_run;
+}
+
+int get_n_to_run_2_8_10 (int * to_run, mpz_t A, int r, int n, int nf, int y) {
+	int *not_to_run = (int *) malloc(sizeof(int) * 2 * nf);						// get p, x, z such that A*r^x+y = 0 (mod p) and r^z = 1 (mod p)
+	int size_not_to_run = get_not_to_run_2_8_10 (not_to_run, A, r, nf, y);	// no n = x+kz for any integer k should be tested (all divisble by p)
+	int k = 0;
+	int exp;
+	for (int i = 0; i < size_not_to_run; i++) {		// for each small prime tested
+		exp = (int) ceil ((n - *(not_to_run + 2 * i)) / (double) *(not_to_run + 2 * i + 1)) * (*(not_to_run + 2 * i + 1)) + *(not_to_run + 2 * i) - n;		// get initial exponent's index (x - n + z*ceil( (n-x)/z) )
+		while (exp < nf - n + 1) {
+			*(to_run + exp) = 1;					// this N with exponent (exp+n) will be divisible by some small prime
+			exp += *(not_to_run + 2 * i + 1);		// add z (next iteration remove new exponent from the list if still in range)
+		}
 	}
-	print_req_args();
-	return 1;
+	int size_to_run = 0;
+	for (int i = 0; i < nf - n + 1; i++) {
+		if (!*(to_run + i)) {						// has not been marked as divisible by some x + kz above
+			*(to_run + size_to_run) = i + n;		// this integer should be run
+			size_to_run++;
+		}
+	}
+	to_run = (int *) realloc (to_run, sizeof(int) * size_to_run);
+	return size_to_run;
+}
+
+//	Adds prime's exponent to correct .txt file
+void add_prime_file_OEIS(int exp, char * fileStr) {
+	FILE * f = fopen (fileStr, "a");
+	if (f == NULL) {
+		printf ("Error oepning file:\n\t%s\nn = %d is prime\n", fileStr, exp);
+		return;
+	}
+	fprintf (f, "%d\n", exp);
+	fclose(f);
+	return;
+}
+
+//	Adds prime's exponent to correct .txt file
+void add_prime_file_SIDH(int f, int x, int y, char * fileStr) {
+	FILE * file = fopen (fileStr, "a");
+	if (file == NULL) {
+		printf ("Error oepning file:\n\t%s\nf = %d, x = %d, y = %d is prime\n", fileStr, f, x, y);
+		return;
+	}
+	fprintf (file, "%d, %d, %d\n", f, x, y);
+	fclose(file);
+	return;
+}
+
+//	Comparison of two integers for use with qsort (equivalent to <)
+int cmp (const void * a, const void * b) {
+	return (*(int *)a - *(int *)b);
+}
+
+//	Removes any duplicated prime's exponents from the specified .txt file
+void remove_dup_file(char * fileStr) {
+	int size = 100;
+	int nPrimes = 0;
+	int * primes = (int *) calloc(size, sizeof(int));
+	FILE * f = fopen (fileStr, "r");
+	if (f == NULL) {printf ("Error opening file, no duplicates removed.\n"); return;}
+	fscanf (f, "%d", primes + nPrimes);
+	while (!feof(f)) {																// get exponents for all the prime numbers found
+		nPrimes++;																	// count number found
+		fscanf (f, "%d", primes + nPrimes);
+		if (nPrimes == size) {														// increase allocation for array of primes' exponents if necessary
+			size *= 2;
+			primes = (int *) realloc (primes, size * sizeof(int));					// should implement error checking as well
+		}
+	}
+	qsort(primes, nPrimes, sizeof(int), cmp);										// sort primes found
+	int current = *primes;
+	int new_size = 1;
+	for (int i = 1; i < nPrimes; i++) {												// for each number
+		if (current != *(primes + i)) {												// if not yet seen
+			current = *(primes + i);												// update current
+			*(primes + new_size) = current;											// update new list of primes
+			new_size++;																// update size of new list of primes
+		}
+	}
+	primes = (int *) realloc (primes, sizeof(int) * new_size);						// reallocate only the necessary memory
+	nPrimes = new_size;
+	f = freopen (fileStr, "w", f);													// overwrite the old file with the new data
+	if (f == NULL) {printf ("Error reopening file, no duplicates removed.\n"); return;}
+	for (int i = 0; i < nPrimes; i++) {
+		fprintf (f, "%d\n", *(primes + i));
+	}
+	fclose(f);
+	return;
+}
+
+//	Converts the parameters passed from command line to a correct fileStr to add newly found primes to
+void get_file_name_OEIS(char * fileStr, char *args[]) {
+	strcpy(fileStr,"../res/");
+	strcat(fileStr,args[2]);					// = A value used
+	strcat(fileStr," x ");
+	strcat(fileStr,args[3]);					// = r value used
+	if (atoi(args[6]) == 1) {					// if gamma / eta is 1
+		strcat(fileStr,"^n + ");
+	}
+	else {
+		strcat(fileStr,"^n - ");
+	}
+	if (atoi(args[1]) == 2) {					// if doing section 2 tests
+		strcat(fileStr,"1.txt");
+	}
+	else {
+		strcat(fileStr,"y_n.txt");
+	}
+	return;
+}
+
+void get_file_name_SIDH(char * fileStr, char * args[]) {
+	strcpy(fileStr,"../res/SIDH ");
+	strcat(fileStr,args[1]);					// = bitlength
+	strcat(fileStr,"-bit: f x 2^n x ");
+	strcat(fileStr,args[2]);					// = r used (small prime)
+	strcat(fileStr,"^m - 1");
+	return;
+}
+
+void print_req_args() {
+	printf("\nFor OEIS testing use command line arguments:\n");
+	printf("\t2/7, A, r, n, nf, gamma/eta\n");
+	printf("\nSection 2 or 7 of RWG\n");
+	printf("A a small positive integer with gcd(A,r) = 1\n");
+	printf("r a small prime\n");
+	printf("n < nf positive integers\n");
+	printf("gamma/eta = +/-1\n\n\n");
+	printf("For SIDH testing use command line arguments:\n");
+	printf("\tBitLength, r\n");
+	printf("Bitlength = total bitlength for prime numbers to be found\n");
+	printf("r a small prime (!=2)\n\n\n");
+	return;
 }
 
