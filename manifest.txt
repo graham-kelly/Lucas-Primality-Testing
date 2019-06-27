@@ -1,8 +1,21 @@
-Main:
+ptest:
 	Functionality:
-		calls primality testing for OEIS sequences of prime numbers or groups of SIDH numbers by size (methods in uitls)
+		primality testing for OEIS sequences of prime numbers or groups of SIDH numbers by size and
+		methods to do associated i/o
 	Methods:
-		(None)
+		run_tests - call OEIS primality test or SIDH primality test as appropreate
+		OEIS_testing - seive out exponenets that will never be prime and call appropreate primality test
+		SIDH_testing - find some primes with bit-length asked for calling section 2 primaity tests as needed
+		get_not_to_run_2_8_10 - obtain an array of pairs of integers which can be used to sieve out potential
+			primes for use finding OEIS sequences
+		get_n_to_run_2_8_10 - get an array of integer exponents that should be tested for primality for OEIS
+			sequences
+		add_prime_file_OEIS - add exponent that was used to find a prime to the corresponding output file
+		add_prime_file_SIDH - add parameters used to find a prime to the corresponding output file
+		remove_dup_file - ensure OEIS primes' exponents are unique and sorted
+		get_file_name_OEIS - get output file to open for given input
+		get_file_name_SIDH - get output file to open for given input
+		print_req_args - print user prompt for how to use the program
 	
 RWG2:
 	Functionality:
@@ -67,8 +80,7 @@ roots:
 	
 utils:
 	Functionality:
-		methods for some algebraic numbers (A + B * sqrt(C)), methods to seive out non-prime exponents for
-		use finding primes for OEIS, methods for iterating through OEIS and SIDH useful primes, and some simple algorithms
+		methods for some algebraic numbers (A + B * sqrt(C)) and some simple algorithms
 	Methods:
 		mpzrz_mul - multiplication for numbers A + B * sqrt(C)
 		mpzrz_sqr - squaring for numbers A + B * sqrt(C)
@@ -76,12 +88,6 @@ utils:
 		trial_div - trail division for primality for large integers (tests up to first million primes)
 		trail_div_small - trail division for small integers (< 15485863)
 		gcd - gcd for very small integers (32 bits)
-		cmp - less than comparison required by remove_dup_array
-		remove_dup_array - used to ensure no duplicates are found in OEIS prime files
-		get_not_to_run_2_8_10 - part of seive for n such that Ar^n + y is never prime (for specific A, r, y) 
-		get_n_to_run_2_8_10 - seive to get n such that Ar^n + y may be prime (for specific A, r, y) 
-		OEIS_testing - iterate through possible primes Ar^n + y finding sequences that may be of interest to OEIS
-		SIDH_testing - iterate through possible primes Ar^n + y (f * 2^x * r^y - 1) of a given size finding primes that may be useful in SIDH
-
+		isSquare - check if input is a perfect square (for 32 bit integers)
 
 

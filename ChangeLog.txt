@@ -50,14 +50,26 @@
 		PrimesSIDH.sage added and implements the same method for comparison (no output to file)
 	get_next_RST_i requires mpz_t variables (tmp_var) to be initialized (and cleared) outside the method (removes repetitive init and clear instructions)
 
+2019/06/14
+	ptestio.c replaced with ptest.c
+	decoupled code, functions in utils.c that deal with primality testing were moved to ptest.c
+	primalityRWG.h created which can be used to import the library of functions that were implemented
 
-
-
+2019/06/27
+	refactored code to form library (with utils.c, roots.c, RWG2.c, RWG2S.c, RWG7.c and RWG7S.c)
+	library can be compiled with makefile in lib/libsrc
+	main.c file removed, testing done with ptest.c, compile with updated makefile
+	
+	
+	
+	
+	
+	
 
 Future Updates
-	More selectivity for f values in SIDH prime finding method could be added
-	Add optional printout of primality proof?
-	
+	remove requirement to have primessmall.txt in code
+	use gmp mpz_probab_prime_p funtion instead of trial division using some small number of reps
+		find appropreate number for reps
 	
 	
 	
