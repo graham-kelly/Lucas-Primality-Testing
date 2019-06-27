@@ -1,25 +1,25 @@
 #include <gmp.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
 #include "primalityRWG.h"
-#include "utils.h"
 #include "ptest.h"
 
-int run_tests (int n_arg, char *args[]) {
+int main(int argc, char *argv[]) {
 	char fileStr[100];
-	if (n_arg == 7) {
-		get_file_name_OEIS (fileStr, args);
+	if (argc == 7) {
+		get_file_name_OEIS (fileStr, argv);
 		printf("%s\n",fileStr + 7);
-		OEIS_testing (fileStr, atoi(args[1]),atoi(args[2]), atoi(args[3]), atoi(args[4]), atoi(args[5]), atoi(args[6]));
+		OEIS_testing (fileStr, atoi(argv[1]),atoi(argv[2]), atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
 		remove_dup_file(fileStr);
 		return 0;
 	}
-	if (n_arg == 3) {
-		get_file_name_SIDH (fileStr, args);
+	if (argc == 3) {
+		get_file_name_SIDH (fileStr, argv);
 		printf("%s\n",fileStr + 7);
-		SIDH_testing(fileStr, atoi(args[1]), atoi(args[2]));
+		SIDH_testing(fileStr, atoi(argv[1]), atoi(argv[2]));
 		return 0;
 	}
 	print_req_args();
