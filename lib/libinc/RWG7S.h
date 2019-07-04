@@ -22,14 +22,14 @@ _Bool get_RST_0 (mpz_t RST[3], int A, mpz_t rEXPn, mpz_t gamma_n_r, int eta, int
 #ifndef GET_NEXT_RST_I_H_
 #define GET_NEXT_RST_I_H_
 
-void get_next_RST_i (mpz_t newRST[3], mpz_t oldRST[3], mpz_t tmp_val[8], int QPP[3], int r, mpz_t N);
+void get_next_RST_i (mpz_t newRST[3], mpz_t oldRST[3], mpz_t tmp_val[6], int QPP[3], int r, mpz_t XY_array[], mpz_t N);
 
 #endif		//GET_NEXT_RST_I_H_
 
 #ifndef GET_RST_I_H_
 #define GET_RST_I_H_
 
-_Bool get_RST_i (mpz_t rop[3], int i, int QPP[3], int A, int r, mpz_t rEXPn, mpz_t gamma_n_r, int eta, mpz_t N);
+_Bool get_RST_i (mpz_t rop[3], int i, int QPP[3], int A, int r, mpz_t rEXPn, mpz_t gamma_n_r, int eta, mpz_t XY_array[], mpz_t N);
 
 #endif		//GET_RST_I_H_
 

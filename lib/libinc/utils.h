@@ -47,3 +47,10 @@ _Bool isSquare(int x);
 
 #endif		//ISSQUARE_H_
 
+#ifndef LOAD_SMALL_PRIMES_H_
+#define LOAD_SMALL_PRIMES_H_
+
+void load_small_primes();
+
+#endif		//LOAD_SMALL_PRIMES_H_
+

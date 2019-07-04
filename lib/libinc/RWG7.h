@@ -1,9 +1,16 @@
 #ifndef GET_H_K_H_
 #define GET_H_K_H_
 
-void get_HI_k (mpz_t rop1, mpz_t rop2, mpz_t X, mpz_t Y, int k, mpz_t N, mpz_t tmp_val[6]);
+void get_HI_k (mpz_t rop1, mpz_t rop2, int k, mpz_t XY_array[], mpz_t tmp_val[6], mpz_t N);
 
 #endif		//GET_H_K_H_
+
+#ifndef PRECOMPUTE_XY_EXP_H_
+#define PRECOMPUTE_XY_EXP_H_
+
+void get_XY_exp (mpz_t XY_array[], mpz_t X, mpz_t Y, int k, mpz_t N);
+
+#endif		//PRECOMPUTE_XY_EXP_H_
 
 /*
 #ifndef PRIMALITY_TEST_7_1_H_
