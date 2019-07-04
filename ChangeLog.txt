@@ -60,16 +60,29 @@
 	library can be compiled with makefile in lib/libsrc
 	main.c file removed, testing done with ptest.c, compile with updated makefile
 	
+2019/07/02
+	get_HI_k now relies on precomputation of powers of X,Y (inputs) by get_XY_exp and now requires an array of these exponents to be passed in
+		related changes to parameters for get_next_RST_i and get_HI_k
+		get_XY_exp (new method in RWG7.c) created uses multiplication instead of exponentiation
+	beginning of each primality test now more efficiently performs checks for valid input
 	
-	
-	
-	
+2019/07/03
+	trial_div now uses load_small_primes to statically load into memory the list of primes from primessmall.txt
+	trial_div now replaced with mpz_probab_prime_p, decreasing total computation time to about 1/10 of that using trial_div (mpz method is a better composite sieve)
+	get_not_to_run updated to use new load_small_primes function
+		primalityRWG.h updated to make load_small_primes public and removed public functionality of trial division (might be removed entirely)
+	primessmall.txt moved to lib/libsrc
 	
 
+
+
+
+
+
+
 Future Updates
-	remove requirement to have primessmall.txt in code
-	use gmp mpz_probab_prime_p funtion instead of trial division using some small number of reps
-		find appropreate number for reps
+	remove all trail_div functionality entirely?
+	find appropreate number for reps for mpz_probab_prime_p (should be in terms of r, n ~= size of prime)
 	
 	
 	
