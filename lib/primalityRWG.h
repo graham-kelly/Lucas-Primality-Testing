@@ -57,12 +57,23 @@ _Bool get_cUV_i (mpz_t U_n, mpz_t V_n, int QPP[3], mpz_t i, mpz_t N);
 
 #endif		//GET_CUV_I_H_
 
+/*
 #ifndef TRIAL_DIV_H_
 #define TRIAL_DIV_H_
 
 int trial_div (mpz_t N, int ndiv);
 
 #endif		//TRIAL_DIV_H_
+
+
+#endif		//PRIMALITYRWG_H_
+ */
+#ifndef LOAD_SMALL_PRIMES_H_
+#define LOAD_SMALL_PRIMES_H_
+
+int load_small_primes ();
+
+#endif		//LOAD_SMALL_PRIMES_H_
 
 
 #endif		//PRIMALITYRWG_H_
