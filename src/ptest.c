@@ -40,28 +40,6 @@ Runtime:	O(log(log(N)) * log(N)^2)						for tests from section 7
 */
 void OEIS_testing (char * fileStr, int test_num, int A, int r, int n, int nf, int y_eta) {
 	if (test_num == 2) {															// do the tests from section 2
-		mpz_t N; mpz_init (N);
-		while (n < (log(LARGEST_IN_SMALL_PRIMES - y_eta)-log(A))/log(r)) {				// if the potential prime is <= this big it will be in smallPrimes.txt
-			mpz_ui_pow_ui (N, r, n);
-			mpz_mul_ui (N, N, A);
-			if (y_eta == 1) {
-				mpz_add_ui (N, N, 1);
-			}
-			else {
-				mpz_sub_ui (N, N, 1);
-			}						// N = A*r^n+y
-			int divRes = trial_div(N, 0);			// trial division by first million primes (can change 0 to any number between 1 and 1,000,000 to only try dividing by that many primes)
-			if (divRes) {
-				if (mpz_cmpabs_ui (N, divRes) == 0) {
-					printf("\n\nPrime for exponent = %d\n\n", n);
-					add_prime_file_OEIS(n, fileStr);			// add to file
-				}
-			}
-			printf("%d,", n);
-			fflush(stdout);
-			n++;
-		}
-		mpz_clear(N);
 		mpz_t Az; mpz_init (Az);
 		mpz_set_ui (Az, A);
 		int *to_run = (int *) calloc((nf - n + 1), sizeof(int));
@@ -201,20 +179,21 @@ Runtime:	O(p_n * M(A * r^(p_n)))
 Note that initial size of not_to_run should be 2*n
 */
 int get_not_to_run_2_8_10 (int * not_to_run, mpz_t A, int r, int n, int y) {
-	FILE *f = fopen ("primessmall.txt", "r");
-	if (f == NULL) {printf("Error opening file.\n"); return -1;}
+	extern _Bool *p_loaded_primes;
+	extern int *p_small_primes;
+	if (!*p_loaded_primes) {
+		load_small_primes();
+	}
 	int size_not_to_run = 0;
-	int p;
 	mpz_t test_N; mpz_init (test_N);
 	mpz_t rEXPj; mpz_init (rEXPj);
 	_Bool found_x;
 	_Bool found_z;
 	for (int i = 0; i < n; i++) {
-		fscanf (f, "%d", &p);														// get prime from primesSmall
-		if (p >= n) {
+		if (*p_small_primes + i >= n) {
 			break;
 		}
-		mpz_tdiv_r_ui (test_N, A, p);
+		mpz_tdiv_r_ui (test_N, A, *p_small_primes + i);
 		if (y == 1) {
 			mpz_add_ui (test_N, test_N, 1);
 		}
@@ -224,7 +203,7 @@ int get_not_to_run_2_8_10 (int * not_to_run, mpz_t A, int r, int n, int y) {
 		mpz_set_ui (rEXPj, 1);
 		found_x = 0;
 		found_z = 0;
-		for (int j = 1; j < p; j++) {					// find x, z such that A*r^x+z = 0 (mod p) and r^z = 1 (mod p)
+		for (int j = 1; j < *p_small_primes + i; j++) {					// find x, z such that A*r^x+z = 0 (mod p) and r^z = 1 (mod p)
 			if (y == 1) {
 				mpz_sub_ui (test_N, test_N, 1);
 				mpz_mul_ui (test_N, test_N, r);
@@ -235,12 +214,12 @@ int get_not_to_run_2_8_10 (int * not_to_run, mpz_t A, int r, int n, int y) {
 				mpz_mul_ui (test_N, test_N, r);
 				mpz_sub_ui (test_N, test_N, 1);
 			}						// test_N = A*(r^j) + y
-			if (!found_x && mpz_divisible_ui_p (test_N, p)) {
+			if (!found_x && mpz_divisible_ui_p (test_N, *p_small_primes + i)) {
 				*(not_to_run + 2 * size_not_to_run) = j;
 				found_x = 1;
 			}
 			mpz_mul_ui (rEXPj, rEXPj, r);
-			if (!found_z && mpz_congruent_ui_p(rEXPj, 1, p)) {
+			if (!found_z && mpz_congruent_ui_p(rEXPj, 1, *p_small_primes + i)) {
 				*(not_to_run + 2 * size_not_to_run + 1) = j;
 				found_z = 1;
 			}
@@ -252,7 +231,6 @@ int get_not_to_run_2_8_10 (int * not_to_run, mpz_t A, int r, int n, int y) {
 	}
 	mpz_clear (test_N);
 	mpz_clear (rEXPj);
-	fclose(f);
 	not_to_run = (int *) realloc (not_to_run, sizeof(int) * 2 * size_not_to_run);
 	return size_not_to_run;
 }
