@@ -5,6 +5,8 @@
 #include "RWG7.h"
 #include "RWG7S.h"
 
+#define MillerRabinReps 15
+
 static const int P_ipq_table_size = 12;
 static const int P_ipq_table[12][3] =	{{11,-89,1199},{31,-409,22289},{41,981,239809},{61,1111,214049},		// format is [q, P(1,5,q), P(2,5,q)]
 										{71,101,-1310731},{101,271,-1294921},{131,-4009,3735989},
@@ -29,7 +31,7 @@ Returns:
 Runtime:	O(log(r) * r^2 * M(N))
 	k = (r-1)/2 and most expensive operation is exponentiation in nested loop
 */
-void get_HI_k (mpz_t rop1, mpz_t rop2, mpz_t X, mpz_t Y, int k, mpz_t N, mpz_t tmp_val[6]) {
+void get_HI_k (mpz_t rop1, mpz_t rop2, int k, mpz_t XY_array[], mpz_t tmp_val[6], mpz_t N) {
 	int i;
 	int j = 0;
 	mpz_set_ui (outer_sum1, 0);
@@ -39,9 +41,7 @@ void get_HI_k (mpz_t rop1, mpz_t rop2, mpz_t X, mpz_t Y, int k, mpz_t N, mpz_t t
 		mpz_set_ui (inner_sum1, 0);
 		mpz_set_ui (inner_sum2, 0);
 		while (i <= j) {													// sum(i=0 -> j) binomial_coef(2j+1, 2i) * X^i * Y^(j-i)
-			mpz_powm_ui (tmp_val[0], X, i, N);								// X^i
-			mpz_powm_ui (tmp_val[1], Y, j-i, N);							// Y^(j-i)
-			mpz_mul (tmp_val[0], tmp_val[0], tmp_val[1]);					// X^i * Y^(j-i)
+			mpz_mul (tmp_val[0], XY_array[i], XY_array[k + 1 + j - i]);		// X^i * Y^(j-i) (X^a stored at index a and Y^(a) at index k+1+a of the XY_array)
 			mpz_bin_uiui (tmp_val[1], 2*j+1, 2*i);							// binom (2j+1, 2i)
 			mpz_mul (tmp_val[1], tmp_val[0], tmp_val[1]);
 			mpz_add (inner_sum1, inner_sum1, tmp_val[1]);					// inner_sum1 = (sum(i=0 -> j) binomial_coef (2j+1, 2i) * X^i * Y^(j-i)) / (2j+1)
@@ -67,6 +67,30 @@ void get_HI_k (mpz_t rop1, mpz_t rop2, mpz_t X, mpz_t Y, int k, mpz_t N, mpz_t t
 	}
 	mpz_mod (rop1, outer_sum1, N);
 	mpz_mod (rop2, outer_sum2, N);
+	return;
+}
+
+/*		Precompute X^i, Y^i for i = 0, ..., k for the get_HI_k function
+Parameters:
+	XY_array	an array of size 2(k+1)*sizeof(mpz_t)
+	X			the first argument to the H_k polynomial defined in section 4 of RWG
+	Y			the second argument to the H_k polynomial defined in section 4 of RWG
+	k			index of H_k function defined in section 4 of RWG, called with (r-1)/2 in the primality tests 7.1-4
+	
+Returns:
+	XY_array	the values of X^i, Y^i for i = 0, ..., k
+Runtime:	O(k * M(N)) for N as defined in get_HI_k
+*/
+void get_XY_exp (mpz_t XY_array[], mpz_t X, mpz_t Y, int k, mpz_t N) {
+	mpz_set_ui (XY_array[0], 1);								// X^0
+	mpz_set_ui (XY_array[0 + k + 1], 1);						// Y^0
+	for (int i = 1; i <= k; i++) {
+		mpz_mul (XY_array[i], XY_array[i - 1], X);				// X^i = X * X^(i-1)
+		mpz_mul (XY_array[i + k + 1], XY_array[i + k], Y);		// Y^i = Y * Y^(i-1)
+		mpz_mod (XY_array[i], XY_array[i], N);
+		mpz_mod (XY_array[i + k + 1], XY_array[i + k + 1], N);
+	}
+	return;
 }
 
 #define MAX_ABSOLUTE_Q_P1_P2_SIZE 100;
@@ -323,17 +347,13 @@ Runtime:	log(log(N)) * log(N)^2
 	from hensel lifting to find N
 */
 int primality_test_7_2_4 (int A, int r, int n, int eta) {
-	if (A % 2 != 0 || eta*eta != 1 || A % r == 0) {
+	if (A % 2 != 0 || eta*eta != 1 || A % r == 0 || log(r) * n <= log(A/2)) {
 		return -1;
 	}
 	mpz_t rEXPn; mpz_init (rEXPn);
 	mpz_ui_pow_ui (rEXPn, r, n);															// r^n
-	if (mpz_cmp_ui (rEXPn, A/2) <= 0) {
-		mpz_clear (rEXPn);
-		return -1;
-	}
 	mpz_t gamma_n_r; mpz_init (gamma_n_r);
-	mpz_t tmp_val[8]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);
+	mpz_t tmp_val[6]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);						// more mpz_t variables will be needed in get_next_RST_i and are initialized here so it isn't done mulitple times
 	mpz_set_si (tmp_val[0], -1);
 	mpz_set_ui (tmp_val[1], r);
 	if (! h_lift_root (gamma_n_r, tmp_val[0], tmp_val[1], n)) {							// = sqrt(-1) if r^n = 1 (mod 4)
@@ -350,24 +370,17 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 	mpz_mul_ui (N, rEXPn, A);															// = Ar^n
 	mpz_mul_si (tmp_val[0], gamma_n_r, eta);
 	mpz_add (N, N, tmp_val[0]);														// computed N
-//************************************************************************************************************************************************************************************
-//if (mpz_probab_prime_p (N, 20)) {gmp_printf("n = %d gives a likely prime\n", n);}
-//************************************************************************************************************************************************************************************
-	int divRes = trial_div(N, 0);
-	if (divRes) {													// trial division by first million primes (can change 0 to any number between 1 and 1,000,000 to only try dividing by that many primes)
-		if (mpz_cmpabs_ui (N, divRes) == 0) {
-			mpz_clear(N);
-			mpz_clear (rEXPn);
-			mpz_clear (gamma_n_r);
-			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
-			return 1;
+	int divRes = mpz_probab_prime_p (N, MillerRabinReps);
+	if (divRes == 0 || divRes == 2) {							// 0 => not prime, 1 => likely prime, 2 => definately prime
+		mpz_clear(N);
+		mpz_clear (rEXPn);
+		mpz_clear (gamma_n_r);
+		mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
+		if (divRes == 0) {
+			return 0;											// composite
 		}
 		else {
-			mpz_clear(N);
-			mpz_clear (rEXPn);
-			mpz_clear (gamma_n_r);
-			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
-			return 0;
+			return 1;											// definately prime
 		}
 	}
 	int QPP[3];
@@ -379,30 +392,39 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 		return 0;
 	}
 	mpz_t RST_i[3]; mpz_init (RST_i[0]); mpz_init (RST_i[1]); mpz_init (RST_i[2]);
-	mpz_t S_im1; mpz_init (S_im1);
-	if (!get_RST_i (RST_i, 0, QPP, A, r, rEXPn, gamma_n_r, eta, N)) {
+	mpz_t XY_array[r + 1];
+	for (int i = 0; i < r + 1; i++) {
+		mpz_init (XY_array[i]);
+	}
+	if (!get_RST_i (RST_i, 0, QPP, A, r, rEXPn, gamma_n_r, eta, XY_array, N)) {
 		mpz_clear (N);
 		mpz_clear (rEXPn);
 		mpz_clear (gamma_n_r);
 		mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]);
 		mpz_clear (RST_i[0]); mpz_clear (RST_i[1]); mpz_clear (RST_i[2]);
-		mpz_clear (S_im1);
+		for (int i = 0; i < r + 1; i++) {
+			mpz_clear (XY_array[i]);
+		}
 		return 0;
 	}
+	mpz_t S_im1; mpz_init (S_im1);
 	int alpha = 0;
-	mpz_init(tmp_val[2]); mpz_init(tmp_val[3]); mpz_init(tmp_val[4]); mpz_init(tmp_val[5]); mpz_init(tmp_val[6]); mpz_init(tmp_val[7]);
+	mpz_init(tmp_val[2]); mpz_init(tmp_val[3]); mpz_init(tmp_val[4]); mpz_init(tmp_val[5]);
 	while (alpha++ < n) {														// alpha = 1 ... n
 		mpz_set (S_im1, RST_i[1]);
-		get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, N);
+		get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, XY_array, N);
 		mpz_mul (tmp_val[0], RST_i[2], RST_i[2]);								// = (T_i)^2 (if N is prime will be 4 (mod N))
 		mpz_sub_ui (tmp_val[0], tmp_val[0], 4);
 		if (mpz_divisible_p(RST_i[0], N) && !mpz_divisible_p(tmp_val[0], N)) {	// based on Theorem 7.4
 			mpz_clear (N);
 			mpz_clear (rEXPn);
 			mpz_clear (gamma_n_r);
-			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]); mpz_clear (tmp_val[3]); mpz_clear (tmp_val[4]); mpz_clear (tmp_val[5]); mpz_clear (tmp_val[6]); mpz_clear (tmp_val[7]);
+			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]); mpz_clear (tmp_val[3]); mpz_clear (tmp_val[4]); mpz_clear (tmp_val[5]);
 			mpz_clear (RST_i[0]); mpz_clear (RST_i[1]); mpz_clear (RST_i[2]);
 			mpz_clear (S_im1);
+			for (int i = 0; i < r + 1; i++) {
+				mpz_clear (XY_array[i]);
+			}
 			return 0;
 		}
 		if (mpz_divisible_p(tmp_val[0], N)) {									// if N | (T_i)^2 - 4
@@ -413,15 +435,18 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 	}
 	if (log(A/2)/log(r) < 2*alpha - n) {
 		while (alpha++ < n) {
-			get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, N);
+			get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, XY_array, N);
 		}
 		mpz_mul (tmp_val[0], RST_i[2], RST_i[2]);											// = (T_n)^2 (if N is prime will be 4 (mod N))
 		mpz_sub_ui (tmp_val[0], tmp_val[0], 4);
 		mpz_clear (rEXPn);
 		mpz_clear (gamma_n_r);
-		mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]); mpz_clear (tmp_val[3]); mpz_clear (tmp_val[4]); mpz_clear (tmp_val[5]); mpz_clear (tmp_val[6]); mpz_clear (tmp_val[7]);
+		mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]); mpz_clear (tmp_val[3]); mpz_clear (tmp_val[4]); mpz_clear (tmp_val[5]);
 		mpz_clear (RST_i[0]); mpz_clear (RST_i[2]);
 		mpz_clear (S_im1);
+		for (int i = 0; i < r + 1; i++) {
+			mpz_clear (XY_array[i]);
+		}
 		if (mpz_divisible_p(tmp_val[0], N) && mpz_divisible_p(RST_i[1], N)) {				// if N | T_n^2 -4 and S_n
 			mpz_clear (N);
 			mpz_clear (tmp_val[0]);
@@ -438,7 +463,7 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 /*
 	int i = alpha;
 	while (i++ < n) {																// uncomment to potentially get information about prime divisors of N
-		get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, N);
+		get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, XY_array, N);
 	}
 	if (mpz_divisible_p(tmp_val[0], N) && mpz_divisible_p(RST_i[1], N)) {				// if N | T_n^2 -4 and S_n
 		gmp_printf ("A prime divisor of N = %d*%d^%d + (%d)gamma_n(r) must satisfy p^4 = 1 (mod %d^%d\n", A, r, n, eta, r, alpha);
@@ -447,9 +472,12 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 	mpz_clear (N);
 	mpz_clear (rEXPn);
 	mpz_clear (gamma_n_r);
-	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]); mpz_clear (tmp_val[3]); mpz_clear (tmp_val[4]); mpz_clear (tmp_val[5]); mpz_clear (tmp_val[6]); mpz_clear (tmp_val[7]);
+	mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]); mpz_clear (tmp_val[3]); mpz_clear (tmp_val[4]); mpz_clear (tmp_val[5]);
 	mpz_clear (RST_i[0]); mpz_clear (RST_i[1]); mpz_clear (RST_i[2]);
 	mpz_clear (S_im1);
+	for (int i = 0; i < r + 1; i++) {
+		mpz_clear (XY_array[i]);
+	}
 	return 0;
 }
 
@@ -480,17 +508,12 @@ Runtime:	log(log(N)) * log(N)^2
 */
 int primality_test_7_5 (int A, int n, int eta) {
 	int r = 5;
-	if (A % 2 != 0 || eta*eta != 1 || A % r == 0) {
+	if (A % 2 != 0 || eta*eta != 1 || A % r == 0 || log(r) * n <= log(A/2)) {
 		return -1;
 	}
 	mpz_t N; mpz_init (N);
 	mpz_t rEXPn; mpz_init (rEXPn);
 	mpz_ui_pow_ui (rEXPn, r, n);															// r^n
-	if (mpz_cmp_ui (rEXPn, A/2) <= 0) {
-		mpz_clear (N);
-		mpz_clear (rEXPn);
-		return -1;
-	}
 	mpz_t gamma_n_r; mpz_init (gamma_n_r);
 	mpz_t tmp_val[3]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]); mpz_init (tmp_val[2]);
 	mpz_set_si (tmp_val[0], -1);
@@ -510,22 +533,16 @@ int primality_test_7_5 (int A, int n, int eta) {
 	mpz_mul_si (tmp_val[0], gamma_n_r, eta);
 	mpz_add (N, N, tmp_val[0]);														// computed N
 	mpz_clear (gamma_n_r);
-//************************************************************************************************************************************************************************************
-//if (mpz_probab_prime_p (N, 20)) {gmp_printf("n = %d gives a likely prime:\n", n);}
-//************************************************************************************************************************************************************************************
-	int divRes = trial_div(N, 0);
-	if (divRes) {													// trial division by first million primes (can change 0 to any number between 1 and 1,000,000 to only try dividing by that many primes)
-		if (mpz_cmpabs_ui (N, divRes) == 0) {
-			mpz_clear(N);
-			mpz_clear (rEXPn);
-			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]);
-			return 1;
+	int divRes = mpz_probab_prime_p (N, MillerRabinReps);
+	if (divRes == 0 || divRes == 2) {							// 0 => not prime, 1 => likely prime, 2 => definately prime
+		mpz_clear(N);
+		mpz_clear (rEXPn);
+		mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]);
+		if (divRes == 0) {
+			return 0;											// composite
 		}
 		else {
-			mpz_clear(N);
-			mpz_clear (rEXPn);
-			mpz_clear (tmp_val[0]); mpz_clear (tmp_val[1]); mpz_clear (tmp_val[2]);
-			return 0;
+			return 1;											// definately prime
 		}
 	}
 	int QPP[3];

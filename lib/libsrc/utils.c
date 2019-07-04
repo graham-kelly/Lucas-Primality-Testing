@@ -3,6 +3,11 @@
 #include <math.h>
 #include "utils.h"
 
+static int small_primes[1000000];
+int *p_small_primes = small_primes;
+static _Bool loaded_primes = 0;
+_Bool *p_loaded_primes = &loaded_primes;
+
 /*			multiplication for numbers a + b * sqrt(c) where x_c = y_c
 Parameters:
 	x	an array of 3 mpz_t representing the number x[0] + x[1]*sqrt(x[2])
@@ -116,21 +121,17 @@ Returns:
 Runtime:	M(N) for division
 */
 int trial_div (mpz_t N, int ndiv) {
+	if (!loaded_primes) {
+		load_small_primes();
+	}
 	if (ndiv > 1000000 || ndiv < 1) {
 		ndiv = 1000000;
 	}
-	FILE *f = fopen ("primessmall.txt", "r");
-	if (f == NULL) {printf("Error opening file.\n"); return 0;}
-	int prime;
-	fscanf (f, "%d", &prime);
-	while (!feof(f)) {
-		if (mpz_divisible_ui_p (N, prime)) {				// if N (mod p) = 0
-			fclose(f);
-			return prime;
+	for (int i = 0; i < ndiv; i++) {
+		if (mpz_divisible_ui_p (N, small_primes[i])) {				// if N (mod p) = 0
+			return small_primes[i];
 		}
-		fscanf (f, "%d", &prime);
 	}
-	fclose(f);
 	return 0;
 }
 
@@ -200,7 +201,17 @@ _Bool isSquare(int x) {
 	return 0;
 }
 
-
+void load_small_primes() {
+	FILE *f = fopen ("../lib/libsrc/primessmall.txt", "r");
+	if (f == NULL) {printf("Error opening primessmall.txt.\n"); return;}
+	int prime;
+	for (int i = 0; i < 1000000; i++) {
+		fscanf (f, "%d", &small_primes[i]);
+	}
+	fclose(f);
+	loaded_primes = 1;
+	return;
+}
 
 
 

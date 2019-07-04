@@ -4,7 +4,8 @@
 #include "RWG2.h"
 #include "RWG2S.h"
 
-#define MAX_ABSOLUTE_P_Q_SIZE 100;
+#define MillerRabinReps 15
+#define MAX_ABSOLUTE_P_Q_SIZE 100
 
 /*			Get the coefficients of the g_r(x) polynomial from RWG Theorem 2.4
 Parameters:
@@ -129,8 +130,13 @@ then N is prime
 Runtime:	O(min(r * log(N)^2, log(log(N)) * log(N)^2))
 */
 int primality_test_2_8 (mpz_t A, int r, int n, short y) {
-	mpz_t N; mpz_init(N);
 	mpz_t tmp_val; mpz_init(tmp_val);
+	mpz_divexact_ui (tmp_val, A, 2);
+	if (n < mpz_sizeinbase(tmp_val, r) || y*y != 1 || !mpz_divisible_2exp_p(A,1)) {		// if A > 2r^n or gamma^2 != 1 or A is odd
+		mpz_clear (tmp_val);
+		return -1;								// test doesn't apply
+	}
+	mpz_t N; mpz_init(N);
 	mpz_ui_pow_ui (tmp_val, r, n);
 	mpz_mul (N, tmp_val, A);
 	if (y == 1) {
@@ -139,23 +145,15 @@ int primality_test_2_8 (mpz_t A, int r, int n, short y) {
 	else {
 		mpz_sub_ui (N, N, 1);										// N = A * r^n + y
 	}
-	mpz_mul_ui (tmp_val, tmp_val, 2);
-	if (mpz_cmp (tmp_val, A) < 0 || y*y != 1 || !mpz_divisible_2exp_p(A,1)) {		// if A > 2r^n or gamma^2 != 1 or A is odd
+	int divRes = mpz_probab_prime_p (N, MillerRabinReps);
+	if (divRes == 0 || divRes == 2) {							// 0 => not prime, 1 => likely prime, 2 => definately prime
 		mpz_clear(N);
-		mpz_clear(tmp_val);
-		return -1;													// test doesn't apply
-	}
-	int divRes = trial_div(N, 0);
-	if (divRes) {													// trial division by first million primes (can change 0 to any number between 1 and 1,000,000 to only try dividing by that many primes)
-		if (mpz_cmpabs_ui (N, divRes) == 0) {
-			mpz_clear(N);
-			mpz_clear(tmp_val);
-			return 1;
+		mpz_clear (tmp_val);
+		if (divRes == 0) {
+			return 0;											// composite
 		}
 		else {
-			mpz_clear(N);
-			mpz_clear(tmp_val);
-			return 0;
+			return 1;											// definately prime
 		}
 	}
 	int a = -1;
@@ -252,15 +250,12 @@ Runtime:	O(log(N)^2)
 */
 int primality_test_2_10 (mpz_t A, int n, short y) {
 	short result = 1;												// assume the number is prime until found composite
-	if (mpz_divisible_2exp_p(A,1) || y*y != 1) {
+	if (mpz_divisible_2exp_p(A,1) || y*y != 1 || n <= mpz_sizeinbase(A, 2)) {
 		return -1;													// test doesn't apply
 	}
 	mpz_t N; mpz_init(N);
 	mpz_t tmp_val; mpz_init(tmp_val);
 	mpz_ui_pow_ui (tmp_val, 2, n);									// tmp_val = 2^n
-	if (mpz_cmp (tmp_val, A) < 0) {								// if A >= 2^n
-		return -1;													// test doesn't apply
-	}
 	mpz_mul (N, tmp_val, A);
 	if (y == 1) {
 		mpz_add_ui (N, N, 1);										// N = A * r^n + y
@@ -268,17 +263,15 @@ int primality_test_2_10 (mpz_t A, int n, short y) {
 	else {
 		mpz_sub_ui (N, N, 1);										// N = A * r^n + y
 	}
-	int divRes = trial_div(N, 0);
-	if (divRes) {													// trial division by first million primes (can change 0 to any number between 1 and 1,000,000 to only try dividing by that many primes)
-		if (mpz_cmpabs_ui (N, divRes) == 0) {
+	int divRes = mpz_probab_prime_p (N, MillerRabinReps);
+	if (divRes == 0 || divRes == 2) {							// 0 => not prime, 1 => likely prime, 2 => definately prime
 		mpz_clear(N);
-		mpz_clear(tmp_val);
-			return 1;
+		mpz_clear (tmp_val);
+		if (divRes == 0) {
+			return 0;											// composite
 		}
 		else {
-		mpz_clear(N);
-		mpz_clear(tmp_val);
-			return 0;
+			return 1;											// definately prime
 		}
 	}
 	mpz_t r_i; mpz_init (r_i);
