@@ -73,15 +73,20 @@
 		primalityRWG.h updated to make load_small_primes public and removed public functionality of trial division (might be removed entirely)
 	primessmall.txt moved to lib/libsrc
 	
+2019/07/29
+	removed unneeded arguments from get_RST_0, get_RST_i
+	fixed type of load_small_primes from int to void
+	removed prime variable from load_small_primes
+	"oepening" in error message fixed to "opening"
+	primality_test_7_2_4 now uses mpz_t A to allow it to be much bigger when necessary (instead of int type)
+	primality_test_7_5 now uses mpz_t A to allow it to be much bigger when necessary (instead of int type)
 
-
-
-
+2019/07/30
+	add_time_file added so that timing data (seconds to check if the number is prime) will now be stored in timedata.txt
 
 
 
 Future Updates
-	remove all trail_div functionality entirely?
 	find appropreate number for reps for mpz_probab_prime_p (should be in terms of r, n ~= size of prime)
 	
 	
