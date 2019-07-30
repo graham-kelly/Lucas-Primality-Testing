@@ -39,14 +39,14 @@ _Bool get_v_i (mpz_t result, mpz_t i, int p, int d, mpz_t N);
 #ifndef PRIMALITY_TEST_7_2_4_H_
 #define PRIMALITY_TEST_7_2_4_H_
 
-int primality_test_7_2_4 (int A, int r, int n, int eta);
+int primality_test_7_2_4 (mpz_t A, int r, int n, int eta);
 
 #endif		//PRIMALITY_TEST_7_2_4_H_
 
 #ifndef PRIMALITY_TEST_7_5_H_
 #define PRIMALITY_TEST_7_5_H_
 
-int primality_test_7_5 (int A, int n, int eta);
+int primality_test_7_5 (mpz_t A, int n, int eta);
 
 #endif		//PRIMALITY_TEST_7_5_H_
 
@@ -71,7 +71,7 @@ int trial_div (mpz_t N, int ndiv);
 #ifndef LOAD_SMALL_PRIMES_H_
 #define LOAD_SMALL_PRIMES_H_
 
-int load_small_primes ();
+void load_small_primes ();
 
 #endif		//LOAD_SMALL_PRIMES_H_
 

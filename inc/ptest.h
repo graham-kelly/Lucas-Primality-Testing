@@ -12,6 +12,13 @@ void add_prime_file_SIDH(int f, int x, int y, char * fileStr);
 
 #endif		//ADD_PRIME_FILE_SIDH_H_
 
+#ifndef ADD_TIME_FILE_H_
+#define ADD_TIME_FILE_H_
+
+void add_time_file (time_t tf, time_t ti, int test, mpz_t A, int r, int n, int y_eta);
+
+#endif		//ADD_TIME_FILE_H_
+
 #ifndef REMOVE_DUP_FILE_H_
 #define REMOVE_DUP_FILE_H_
 
@@ -71,7 +78,7 @@ int get_n_to_run_2_8_10 (int * to_run, mpz_t A, int r, int n, int nf, int y);
 #ifndef OEIS_TESTING_H_
 #define OEIS_TESTING_H_
 
-void OEIS_testing (char * fileStr, int test_num, int A, int r, int n, int nf, int y_eta);
+void OEIS_testing (char * fileStr, int test_num, mpz_t A, int r, int n, int nf, int y_eta);
 
 #endif		//OEIS_TESTING_H_
 
@@ -81,6 +88,13 @@ void OEIS_testing (char * fileStr, int test_num, int A, int r, int n, int nf, in
 void SIDH_testing (char * fileStr, int bit_length, int r);
 
 #endif		//SIDH_TESTING_H_
+
+#ifndef COMP_TESTING_H_
+#define COMP_TESTING_H_
+
+void comp_testing ();
+
+#endif		//COMP_TESTING_H_
 
 #ifndef RUN_TESTS_H_
 #define RUN_TESTS_H_
