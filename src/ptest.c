@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <time.h>
 #include <math.h>
 #include <string.h>
 #include "primalityRWG.h"
@@ -12,7 +13,10 @@ int main(int argc, char *argv[]) {
 	if (argc == 7) {
 		get_file_name_OEIS (fileStr, argv);
 		printf("%s\n",fileStr + 7);
-		OEIS_testing (fileStr, atoi(argv[1]),atoi(argv[2]), atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
+		mpz_t A; mpz_init (A);
+		mpz_set_ui (A, atoi(argv[2]));
+		OEIS_testing (fileStr, atoi(argv[1]), A, atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));		// fileStr, test_num, A, r, n, nf, y
+		mpz_clear (A);
 		remove_dup_file(fileStr);
 		return 0;
 	}
@@ -20,6 +24,10 @@ int main(int argc, char *argv[]) {
 		get_file_name_SIDH (fileStr, argv);
 		printf("%s\n",fileStr + 7);
 		SIDH_testing(fileStr, atoi(argv[1]), atoi(argv[2]));
+		return 0;
+	}
+	if (argc == 2 && atoi(argv[1]) == 0) {
+		comp_testing ();
 		return 0;
 	}
 	print_req_args();
@@ -38,33 +46,35 @@ Returns:
 Runtime:	O(log(log(N)) * log(N)^2)						for tests from section 7
 			O(min(r * log(N)^2, log(log(N)) * log(N)^2))	for tests from section 2
 */
-void OEIS_testing (char * fileStr, int test_num, int A, int r, int n, int nf, int y_eta) {
+void OEIS_testing (char * fileStr, int test_num, mpz_t A, int r, int n, int nf, int y_eta) {
+	time_t ti;
 	if (test_num == 2) {															// do the tests from section 2
-		mpz_t Az; mpz_init (Az);
-		mpz_set_ui (Az, A);
 		int *to_run = (int *) calloc((nf - n + 1), sizeof(int));
-		int size_to_run = get_n_to_run_2_8_10 (to_run, Az, r, n, nf, y_eta);
+		int size_to_run = get_n_to_run_2_8_10 (to_run, A, r, n, nf, y_eta);
 		if (r == 2) {
 			for (int i = 0; i < size_to_run; i++) {
-				if (primality_test_2_10 (Az, to_run[i], y_eta) == 1) {
+				ti = time(NULL);
+				if (primality_test_2_10 (A, to_run[i], y_eta) == 1) {
 					printf("\n\nPrime for exponent = %d\n\n", to_run[i]);
 					add_prime_file_OEIS(to_run[i], fileStr);			// add to file
 				}
+				add_time_file (time(NULL), ti, test_num, A, r, to_run[i], y_eta);
 				printf("%d,", to_run[i]);
 				fflush(stdout);
 			}
 		}
 		else {
 			for (int i = 0; i < size_to_run; i++) {
-				if (primality_test_2_8 (Az, r, to_run[i], y_eta) == 1) {
+				ti = time(NULL);
+				if (primality_test_2_8 (A, r, to_run[i], y_eta) == 1) {
 					printf("\n\nPrime for exponent = %d\n\n", to_run[i]);
 					add_prime_file_OEIS(to_run[i], fileStr);			// add to file
 				}
+				add_time_file (time(NULL), ti, test_num, A, r, to_run[i], y_eta);
 				printf("%d,", to_run[i]);
 				fflush(stdout);
 			}
 		}
-		mpz_clear (Az);
 	}
 	else {																// use the tests from section 7
 		if (r == 2 || (r%4 != 1)) {
@@ -73,6 +83,7 @@ void OEIS_testing (char * fileStr, int test_num, int A, int r, int n, int nf, in
 		}
 		if (r == 5) {
 			while (n <= nf) {
+				ti = time(NULL);
 				if (primality_test_7_5 (A, n, y_eta) == 1) {			// specific to r = 5
 					printf("\n\nPrime for exponent = %d\n\n", n);
 					add_prime_file_OEIS(n, fileStr);			// add to file						}
@@ -80,12 +91,14 @@ void OEIS_testing (char * fileStr, int test_num, int A, int r, int n, int nf, in
 				else {
 					printf("%d,", n);
 				}
+				add_time_file (time(NULL), ti, test_num, A, r, n, y_eta);
 				fflush(stdout);
 				n++;
 			}
 		}
 		else {			// use primality testing from both Theorem 7.2 and 7.4 as they require computing the same sequences are have the same requirements
 			while (n <= nf) {
+				ti = time(NULL);
 				if (primality_test_7_2_4 (A, r, n, y_eta) == 1) {
 					printf("\n\nPrime for exponent = %d\n\n", n);
 					add_prime_file_OEIS(n, fileStr);			// add to file
@@ -93,6 +106,7 @@ void OEIS_testing (char * fileStr, int test_num, int A, int r, int n, int nf, in
 				else {
 					printf("%d,", n);
 				}
+				add_time_file (time(NULL), ti, test_num, A, r, n, y_eta);
 				fflush(stdout);
 				n++;
 			}
@@ -164,6 +178,19 @@ void SIDH_testing (char * fileStr, int bit_length, int r) {
 	// can use small f, want 
 	mpz_clear (A);
 	printf("\n");
+	return;
+}
+
+void comp_testing () {
+	for (int A_index = 0; A_index < 30; A_index++) {
+		for (int r_index = 0; r_index < 35; r_index++) {
+			
+		}
+	}
+	// create taskpool
+	// create threads (one task each)
+	// when each thread is done a task it should pick a new one from the taskpool
+	// when taskpool is empty wait for all thread to finish
 	return;
 }
 
@@ -259,10 +286,10 @@ int get_n_to_run_2_8_10 (int * to_run, mpz_t A, int r, int n, int nf, int y) {
 }
 
 //	Adds prime's exponent to correct .txt file
-void add_prime_file_OEIS(int exp, char * fileStr) {
+void add_prime_file_OEIS (int exp, char * fileStr) {
 	FILE * f = fopen (fileStr, "a");
 	if (f == NULL) {
-		printf ("Error oepning file:\n\t%s\nn = %d is prime\n", fileStr, exp);
+		printf ("Error opening file:\n\t%s\nn = %d is prime\n", fileStr, exp);
 		return;
 	}
 	fprintf (f, "%d\n", exp);
@@ -271,14 +298,37 @@ void add_prime_file_OEIS(int exp, char * fileStr) {
 }
 
 //	Adds prime's exponent to correct .txt file
-void add_prime_file_SIDH(int f, int x, int y, char * fileStr) {
+void add_prime_file_SIDH (int f, int x, int y, char * fileStr) {
 	FILE * file = fopen (fileStr, "a");
 	if (file == NULL) {
-		printf ("Error oepning file:\n\t%s\nf = %d, x = %d, y = %d is prime\n", fileStr, f, x, y);
+		printf ("Error opening file:\n\t%s\nf = %d, x = %d, y = %d is prime\n", fileStr, f, x, y);
 		return;
 	}
 	fprintf (file, "%d, %d, %d\n", f, x, y);
 	fclose(file);
+	return;
+}
+
+void add_time_file (time_t tf, time_t ti, int test, mpz_t A, int r, int n, int y_eta) {
+	FILE * time_file = fopen ("../res/timedata.txt", "a");
+	if (time_file == NULL) {
+		printf ("Error opening timedata.txt file:\n%d (%Zd * %d^%d + %d", tf - ti, A, r, n, y_eta);
+		if (test == 7) {
+			printf (" * y_%d(%d))\n", n, r);
+		}
+		else {
+			printf (")\n");
+		}
+		return;
+	}
+	gmp_fprintf (time_file, "%Zd * %d^%d + %d", A, r, n, y_eta);
+	if (test == 7) {
+		fprintf (time_file, " * y_%d(%d): %d\n", n, r, tf - ti);
+	}
+	else {
+		fprintf (time_file, ": %d\n", tf - ti);
+	}
+	fclose(time_file);
 	return;
 }
 
