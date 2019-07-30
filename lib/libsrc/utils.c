@@ -204,7 +204,6 @@ _Bool isSquare(int x) {
 void load_small_primes() {
 	FILE *f = fopen ("../lib/libsrc/primessmall.txt", "r");
 	if (f == NULL) {printf("Error opening primessmall.txt.\n"); return;}
-	int prime;
 	for (int i = 0; i < 1000000; i++) {
 		fscanf (f, "%d", &small_primes[i]);
 	}

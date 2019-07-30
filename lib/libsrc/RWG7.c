@@ -272,7 +272,7 @@ int primality_test_7_1 (int A, int r, int n, int eta) {
 		if (!trial_div (N, 0)) {															// trial division by first million primes
 			int m = (int) (log(A/2)/log(r) + n)/2;								// start with m = ceil ((log_r(A/2) + n)/2)
 			int QPP[3] = {3,2,1};															// pick QPP, gcd(N,Q) = 1, gcd (P1, P2, Q) = 1
-			if (get_RST_i (RST_m, m, QPP, A, r, rEXPn, gamma_n_r, eta, N)) {
+			if (get_RST_i (RST_m, m, QPP, r, rEXPn, N)) {
 				m++;
 				while (m <= n) {
 					mpz_ui_pow_ui (rEXPm, r, m);											// do using binomial theorem ?
@@ -346,14 +346,17 @@ Returns:
 Runtime:	log(log(N)) * log(N)^2
 	from hensel lifting to find N
 */
-int primality_test_7_2_4 (int A, int r, int n, int eta) {
-	if (A % 2 != 0 || eta*eta != 1 || A % r == 0 || log(r) * n <= log(A/2)) {
+int primality_test_7_2_4 (mpz_t A, int r, int n, int eta) {
+	mpz_t tmp_val[6]; mpz_init (tmp_val[0]);
+	mpz_tdiv_q_2exp (tmp_val[0], A, 1);
+	if (eta*eta != 1 || mpz_divisible_ui_p (A, r) || !mpz_divisible_ui_p (A, 2) || mpz_sizeinbase (tmp_val[0], r) > n) {
+		mpz_clear (tmp_val[0]);
 		return -1;
 	}
 	mpz_t rEXPn; mpz_init (rEXPn);
 	mpz_ui_pow_ui (rEXPn, r, n);															// r^n
 	mpz_t gamma_n_r; mpz_init (gamma_n_r);
-	mpz_t tmp_val[6]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]);						// more mpz_t variables will be needed in get_next_RST_i and are initialized here so it isn't done mulitple times
+	mpz_init (tmp_val[1]);						// more mpz_t variables will be needed in get_next_RST_i and are initialized here so it isn't done mulitple times
 	mpz_set_si (tmp_val[0], -1);
 	mpz_set_ui (tmp_val[1], r);
 	if (! h_lift_root (gamma_n_r, tmp_val[0], tmp_val[1], n)) {							// = sqrt(-1) if r^n = 1 (mod 4)
@@ -367,7 +370,7 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 		mpz_add (gamma_n_r, gamma_n_r, rEXPn);											// to get odd sqrt(-1)
 	}																					// gamma_n(r) = sqrt(-1) (mod r^n)
 	mpz_t N; mpz_init (N);
-	mpz_mul_ui (N, rEXPn, A);															// = Ar^n
+	mpz_mul (N, rEXPn, A);															// = Ar^n
 	mpz_mul_si (tmp_val[0], gamma_n_r, eta);
 	mpz_add (N, N, tmp_val[0]);														// computed N
 	int divRes = mpz_probab_prime_p (N, MillerRabinReps);
@@ -396,7 +399,7 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 	for (int i = 0; i < r + 1; i++) {
 		mpz_init (XY_array[i]);
 	}
-	if (!get_RST_i (RST_i, 0, QPP, A, r, rEXPn, gamma_n_r, eta, XY_array, N)) {
+	if (!get_RST_i (RST_i, 0, QPP, r, rEXPn, XY_array, N)) {
 		mpz_clear (N);
 		mpz_clear (rEXPn);
 		mpz_clear (gamma_n_r);
@@ -433,7 +436,8 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 			}
 		}
 	}
-	if (log(A/2)/log(r) < 2*alpha - n) {
+	mpz_tdiv_q_2exp (tmp_val[0], A, 1);
+	if (mpz_sizeinbase(tmp_val[0], r) <= 2*alpha - n) {
 		while (alpha++ < n) {
 			get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, XY_array, N);
 		}
@@ -466,7 +470,7 @@ int primality_test_7_2_4 (int A, int r, int n, int eta) {
 		get_next_RST_i (RST_i, RST_i, tmp_val, QPP, r, XY_array, N);
 	}
 	if (mpz_divisible_p(tmp_val[0], N) && mpz_divisible_p(RST_i[1], N)) {				// if N | T_n^2 -4 and S_n
-		gmp_printf ("A prime divisor of N = %d*%d^%d + (%d)gamma_n(r) must satisfy p^4 = 1 (mod %d^%d\n", A, r, n, eta, r, alpha);
+		gmp_printf ("A prime divisor of N = %Zd*%d^%d + (%d)gamma_n(r) must satisfy p^4 = 1 (mod %d^%d\n", A, r, n, eta, r, alpha);
 	}
 */
 	mpz_clear (N);
@@ -506,16 +510,19 @@ Returns:
 Runtime:	log(log(N)) * log(N)^2
 	from hensel lifting to find N
 */
-int primality_test_7_5 (int A, int n, int eta) {
+int primality_test_7_5 (mpz_t A, int n, int eta) {
 	int r = 5;
-	if (A % 2 != 0 || eta*eta != 1 || A % r == 0 || log(r) * n <= log(A/2)) {
+	mpz_t tmp_val[3]; mpz_init (tmp_val[0]);
+	mpz_tdiv_q_2exp (tmp_val[0], A, 1);
+	if (eta*eta != 1 || mpz_divisible_ui_p (A, r) || !mpz_divisible_ui_p (A, 2) || mpz_sizeinbase (tmp_val[0], r) > n) {
+		mpz_clear (tmp_val[0]);
 		return -1;
 	}
 	mpz_t N; mpz_init (N);
 	mpz_t rEXPn; mpz_init (rEXPn);
 	mpz_ui_pow_ui (rEXPn, r, n);															// r^n
 	mpz_t gamma_n_r; mpz_init (gamma_n_r);
-	mpz_t tmp_val[3]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]); mpz_init (tmp_val[2]);
+	mpz_init (tmp_val[1]); mpz_init (tmp_val[2]);
 	mpz_set_si (tmp_val[0], -1);
 	mpz_set_ui (tmp_val[1], r);
 	if (! h_lift_root (gamma_n_r, tmp_val[0], tmp_val[1], n)) {							// = sqrt(-1) if r^n = 1 (mod 4)
@@ -529,7 +536,7 @@ int primality_test_7_5 (int A, int n, int eta) {
 		mpz_neg (gamma_n_r, gamma_n_r);
 		mpz_add (gamma_n_r, gamma_n_r, rEXPn);											// to get odd sqrt(-1)
 	}																					// gamma_n(r) = sqrt(-1) (mod r^n)
-	mpz_mul_ui (N, rEXPn, A);															// = Ar^n
+	mpz_mul (N, rEXPn, A);															// = Ar^n
 	mpz_mul_si (tmp_val[0], gamma_n_r, eta);
 	mpz_add (N, N, tmp_val[0]);														// computed N
 	mpz_clear (gamma_n_r);
@@ -548,6 +555,7 @@ int primality_test_7_5 (int A, int n, int eta) {
 	int QPP[3];
 	if (!find_QPP_7_5 (QPP, tmp_val[0], N)) {
 //gmp_printf("Couldn't find Q, P1, and P2 for n = %d. Not implemented.\n", n);
+		// clear some variables here?
 		return primality_test_7_2_4 (A, r, n, eta);								// slower than this method but no chance of failure on find_QPP
 	}
 	int Delta = QPP[1]*QPP[1] - 4*QPP[2];										// Delta = P1^2 - 4P2

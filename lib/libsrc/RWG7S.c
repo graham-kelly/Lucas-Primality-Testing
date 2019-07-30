@@ -175,10 +175,7 @@ _Bool get_cUV_i (mpz_t U_i, mpz_t V_i, int QPP[3], mpz_t i, mpz_t N) {
 
 /*			get first term of R, S, T sequences defined in eq 6.4 of RWG
 Parameters:
-	A			positive even integer
 	rEXPn		r^n for small prime r, positive integer n
-	gamma_n_r	sqrt(-1) (mod r^n)
-	eta			= +/- 1
 	QPP			array of (small) integers selected with properties described in sections 3 and 7 of RWG
 	N			arithmetic done (mod N), N = Ar^n + eta*gamma_n(r)
 
@@ -189,7 +186,7 @@ Returns:
 Runtime:	O(log(N)^2)
 	2 inversions (1 in get_cUV_i)
 */
-_Bool get_RST_0 (mpz_t RST[3], int A, mpz_t rEXPn, mpz_t gamma_n_r, int eta, int QPP[3], mpz_t N) {
+_Bool get_RST_0 (mpz_t RST[3], mpz_t rEXPn, int QPP[3], mpz_t N) {
 	mpz_t tmp_val; mpz_init (tmp_val);
 	mpz_t i; mpz_init (i);
 	mpz_mul (i, N, N);
@@ -265,11 +262,11 @@ Returns:
 Runtime:	O(log(N)^2)
 	2 inversions in get_RST_0
 */
-_Bool get_RST_i (mpz_t rop[3], int i, int QPP[3], int A, int r, mpz_t rEXPn, mpz_t gamma_n_r, int eta, mpz_t XY_array[], mpz_t N) {
+_Bool get_RST_i (mpz_t rop[3], int i, int QPP[3], int r, mpz_t rEXPn, mpz_t XY_array[], mpz_t N) {
 //		************************************		would probably be more efficient to implement eq 6.8 - 6.10 of RWG here			************************************
 	mpz_t RST[3]; mpz_init (RST[0]); mpz_init (RST[1]); mpz_init (RST[2]);
 	mpz_t tmp_val[8]; mpz_init (tmp_val[0]); mpz_init (tmp_val[1]); mpz_init (tmp_val[2]); mpz_init (tmp_val[3]); mpz_init (tmp_val[4]); mpz_init (tmp_val[5]); mpz_init (tmp_val[6]); mpz_init (tmp_val[7]);		// allocate space for get_next_RST_i method
-	if (!get_RST_0 (RST, A, rEXPn, gamma_n_r, eta, QPP, N)) {					// compute R_0, S_0, T_0
+	if (!get_RST_0 (RST, rEXPn, QPP, N)) {					// compute R_0, S_0, T_0
 		return 0;
 	}
 	int j = 0;
