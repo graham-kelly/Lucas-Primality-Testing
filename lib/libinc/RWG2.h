@@ -12,6 +12,13 @@ void find_p_q (int arr[3], mpz_t N, short y);
 
 #endif		//FIND_P_Q_H_
 
+#ifndef PRIMALITY_TEST_2_H_
+#define PRIMALITY_TEST_2_H_
+
+int primality_test_2 (mpz_t A, int r, int n, short y);
+
+#endif		//PRIMALITY_TEST_2_H_
+
 #ifndef PRIMALITY_TEST_2_8_H_
 #define PRIMALITY_TEST_2_8_H_
 

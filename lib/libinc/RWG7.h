@@ -21,6 +21,13 @@ int primality_test_7_1 (int A, int r, int n, int eta);
 #endif		//PRIMALITY_TEST_7_1_H_
 */
 
+#ifndef PRIMALITY_TEST_7_H_
+#define PRIMALITY_TEST_7_H_
+
+int primality_test_7 (mpz_t A, int r, int n, int eta);
+
+#endif		//PRIMALITY_TEST_7_H_
+
 #ifndef PRIMALITY_TEST_7_2_4_H_
 #define PRIMALITY_TEST_7_2_4_H_
 
