@@ -1,78 +1,22 @@
-2019/05/08
-	File I/O moved from testing phase (always 1 file) to storing results in res folder
-		File I/O functions in ptestio.c
-	
-	Primality test from RWG 7.5 implemented
-		find_QPP_7_5 implemented (RWG7.c)
-			P1, P2, and Q found with a lookup table, will fail ~1/10^22 times (can be fixed)
-		find_QPP renamed to find_QPP_7_2_4
-		get_ST_0 implemented (used in primality_test_7_5)
-		get_next_ST_i implemented (used in primality_test_7_5)
-		
-	Substantial refactoring of code in RWG2.c, RWG2s.c, RWG7.c and RWG7s.c (primality tests)
-		Significant speedup for test 7.2/4 in RWG by eliminating repeated computation
-	
-	Bugfixes to do with small primes (first million primes as found in primesSmall.txt) not being recognised as prime
-	
-	Many functions refactored slightly to be more readable, faster or more stylistically consistant
-	
-	All methods now have asymptotic time data in their description
-	
-	Added ChangeLog
-	
-	Some testing done and results in res folder (with Ar^n+/-1 for A <= 26, r <= 13, n <= 5000)
-	
+2019/08/24
+	added SIEVING_POW in ptest.c, nf^SIEVING_POW iterations of sieving used (nf = max exponent to check for section 2 tests)
+		SIEVING_POW changed from 1 to 0.8
+	changed output format so that timing data can be collected without sharing one file when running in parallel
+		spaces removed in file name, now file name is 1x2^n+1 (or similar)
+		new output in files is (p)n:time
+			p is there only if the number was prime, n is the exponent
+	command line output for non-error messages removed (can be found in corresponding file in res folder)
+	number for reps for mpz_probab_prime_p is appropreate
+	changelog format reversed to be newest first
 
-2019/05/13
-	added sieving for exponents for OEIS prime finding
-		includes changes to OEIS testing function that cause small N to be checked only by trial division
-		now generates an array of n to check primality of N for (done in utils.get_n_to_run)
-	
-	removed 2nd call to get_H_k in get_next_RST_i
-		changed get_H_k to get_HI_k, now computes H(X,Y) and I(X,Y) = H(Y,X)
-			this adds a few additional multiplications but halves the number of calls to the function needed
+2019/08/06
+	changed format for timing data to remove unnecessary spaces and brackets
+	testing using main in ptest now allows input with very large A values
+		format (given by print_req_args()): ./ptest test_num A_base A_exp A_offset r ni nf gamma/eta
 
-2019/05/16
-	Added function to cycle through SIDH compatable primes
+2019/07/30
+	add_time_file added so that timing data (seconds to check if the number is prime) will now be stored in timedata.txt
 
-2019/05/30
-	code to remove failure chance in find_QPP_7_5
-	in get_QPP_7_2_4 prioritized values of QPP so that Q is a perfect square
-	
-2019/06/07
-	get_next_s_i requires mpz_t variables (sum/term) to be initialized (and cleared) outside the method (removes repetitive init and clear instructions)
-	
-2019/06/08
-	removed extra mpz_mod instructions from get_KL_m that were used for testing
-
-2019/06/13
-	SIDH_testing prime finding in utils.c optimized and now outputs primes uniquely (per file)
-		PrimesSIDH.sage added and implements the same method for comparison (no output to file)
-	get_next_RST_i requires mpz_t variables (tmp_var) to be initialized (and cleared) outside the method (removes repetitive init and clear instructions)
-
-2019/06/14
-	ptestio.c replaced with ptest.c
-	decoupled code, functions in utils.c that deal with primality testing were moved to ptest.c
-	primalityRWG.h created which can be used to import the library of functions that were implemented
-
-2019/06/27
-	refactored code to form library (with utils.c, roots.c, RWG2.c, RWG2S.c, RWG7.c and RWG7S.c)
-	library can be compiled with makefile in lib/libsrc
-	main.c file removed, testing done with ptest.c, compile with updated makefile
-	
-2019/07/02
-	get_HI_k now relies on precomputation of powers of X,Y (inputs) by get_XY_exp and now requires an array of these exponents to be passed in
-		related changes to parameters for get_next_RST_i and get_HI_k
-		get_XY_exp (new method in RWG7.c) created uses multiplication instead of exponentiation
-	beginning of each primality test now more efficiently performs checks for valid input
-	
-2019/07/03
-	trial_div now uses load_small_primes to statically load into memory the list of primes from primessmall.txt
-	trial_div now replaced with mpz_probab_prime_p, decreasing total computation time to about 1/10 of that using trial_div (mpz method is a better composite sieve)
-	get_not_to_run updated to use new load_small_primes function
-		primalityRWG.h updated to make load_small_primes public and removed public functionality of trial division (might be removed entirely)
-	primessmall.txt moved to lib/libsrc
-	
 2019/07/29
 	removed unneeded arguments from get_RST_0, get_RST_i
 	fixed type of load_small_primes from int to void
@@ -81,16 +25,68 @@
 	primality_test_7_2_4 now uses mpz_t A to allow it to be much bigger when necessary (instead of int type)
 	primality_test_7_5 now uses mpz_t A to allow it to be much bigger when necessary (instead of int type)
 
-2019/07/30
-	add_time_file added so that timing data (seconds to check if the number is prime) will now be stored in timedata.txt
+2019/07/03
+	trial_div now uses load_small_primes to statically load into memory the list of primes from primessmall.txt
+	trial_div now replaced with mpz_probab_prime_p, decreasing total computation time to about 1/10 of that using trial_div (mpz method is a better composite sieve)
+	get_not_to_run updated to use new load_small_primes function
+		primalityRWG.h updated to make load_small_primes public and removed public functionality of trial division (might be removed entirely)
+	primessmall.txt moved to lib/libsrc
+	
+2019/07/02
+	get_HI_k now relies on precomputation of powers of X,Y (inputs) by get_XY_exp and now requires an array of these exponents to be passed in
+		related changes to parameters for get_next_RST_i and get_HI_k
+		get_XY_exp (new method in RWG7.c) created uses multiplication instead of exponentiation
+	beginning of each primality test now more efficiently performs checks for valid input
+	
+2019/06/27
+	refactored code to form library (with utils.c, roots.c, RWG2.c, RWG2S.c, RWG7.c and RWG7S.c)
+	library can be compiled with makefile in lib/libsrc
+	main.c file removed, testing done with ptest.c, compile with updated makefile
+	
+2019/06/14
+	ptestio.c replaced with ptest.c
+	decoupled code, functions in utils.c that deal with primality testing were moved to ptest.c
+	primalityRWG.h created which can be used to import the library of functions that were implemented
 
+2019/06/13
+	SIDH_testing prime finding in utils.c optimized and now outputs primes uniquely (per file)
+		PrimesSIDH.sage added and implements the same method for comparison (no output to file)
+	get_next_RST_i requires mpz_t variables (tmp_var) to be initialized (and cleared) outside the method (removes repetitive init and clear instructions)
 
+2019/06/08
+	removed extra mpz_mod instructions from get_KL_m that were used for testing
 
-Future Updates
-	find appropreate number for reps for mpz_probab_prime_p (should be in terms of r, n ~= size of prime)
+2019/06/07
+	get_next_s_i requires mpz_t variables (sum/term) to be initialized (and cleared) outside the method (removes repetitive init and clear instructions)
 	
+2019/05/30
+	code to remove failure chance in find_QPP_7_5
+	in get_QPP_7_2_4 prioritized values of QPP so that Q is a perfect square
 	
-	
-	
-	
-	
+2019/05/16
+	Added function to cycle through SIDH compatable primes
+
+2019/05/13
+	added sieving for exponents for OEIS prime finding
+		includes changes to OEIS testing function that cause small N to be checked only by trial division
+		now generates an array of n to check primality of N for (done in utils.get_n_to_run)
+	removed 2nd call to get_H_k in get_next_RST_i
+		changed get_H_k to get_HI_k, now computes H(X,Y) and I(X,Y) = H(Y,X)
+			this adds a few additional multiplications but halves the number of calls to the function needed
+
+2019/05/08
+	File I/O moved from testing phase (always 1 file) to storing results in res folder
+		File I/O functions in ptestio.c
+	Primality test from RWG 7.5 implemented
+		find_QPP_7_5 implemented (RWG7.c)
+			P1, P2, and Q found with a lookup table, will fail ~1/10^22 times (can be fixed)
+		find_QPP renamed to find_QPP_7_2_4
+		get_ST_0 implemented (used in primality_test_7_5)
+		get_next_ST_i implemented (used in primality_test_7_5)
+	Substantial refactoring of code in RWG2.c, RWG2s.c, RWG7.c and RWG7s.c (primality tests)
+		Significant speedup for test 7.2/4 in RWG by eliminating repeated computation
+	Bugfixes to do with small primes (first million primes as found in primesSmall.txt) not being recognised as prime
+	Many functions refactored slightly to be more readable, faster or more stylistically consistant
+	All methods now have asymptotic time data in their description
+	Added ChangeLog
+	Some testing done and results in res folder (with Ar^n+/-1 for A <= 26, r <= 13, n <= 5000)
