@@ -317,6 +317,20 @@ int primality_test_7_1 (int A, int r, int n, int eta) {
 }
 */
 
+/*			Call one of the RWG section 7 primality tests
+Parameters:
+	A	an even positive integer not divisible by r
+	r	a (small) prime (such that r%4 == 1)
+	n	a positive integer
+	eta	= +/-1
+*/
+int primality_test_7 (mpz_t A, int r, int n, int eta) {
+	if (r == 5) {
+		return primality_test_7_5 (A, n, eta);
+	}
+	return primality_test_7_2_4 (A, r, n, eta);
+}
+
 /*			Theorem 7.2 and 7.4 Primality Tests from RWG
 Parameters:
 	A	an even positive integer not divisible by r

@@ -106,6 +106,20 @@ void find_p_q (int arr[3], mpz_t N, short y) {
 	return;
 }
 
+/*			Call one of the RWG section 2 primality tests
+Parameters:
+	A	a positive integer not divisible by r (must be even if r!=2)
+	r	a (small) prime
+	n	a positive integer
+	y	= +/-1
+*/
+int primality_test_2 (mpz_t A, int r, int n, short y) {
+	if (r == 2) {
+		return primality_test_2_10 (A, n, y);
+	}
+	return primality_test_2_8 (A, r, n, y);
+}
+
 /*			Theorem 2.8 Primality Test from RWG
 Parameters:
 	A	an even positive integer not divisible by r

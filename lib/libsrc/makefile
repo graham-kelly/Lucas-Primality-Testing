@@ -1,5 +1,5 @@
 IDIR =../libinc
-CC=gcc
+CC=gcc -O3
 CFLAGS=-I$(IDIR)# -pg#uncomment -pg to enable profiling
 
 ODIR =../libobj
