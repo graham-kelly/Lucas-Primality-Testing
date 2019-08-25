@@ -216,7 +216,7 @@ int get_not_to_run_2_8_10 (int * not_to_run, mpz_t A, int r, int n, int y) {
 	return size_not_to_run;
 }
 
-double SIEVING_POW = 0.8
+double SIEVING_POW = 0.8;
 
 int get_n_to_run_2_8_10 (int * to_run, mpz_t A, int r, int n, int nf, int y) {
 	int *not_to_run = (int *) malloc(sizeof(int) * 2 * nf);						// get p, x, z such that A*r^x+y = 0 (mod p) and r^z = 1 (mod p)
